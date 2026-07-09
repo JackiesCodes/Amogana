@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 232 27% 4%;
+    --foreground: 214 32% 91%;
+
+    --card: 230 24% 7%;
+    --card-foreground: 214 32% 91%;
+
+    --popover: 230 24% 7%;
+    --popover-foreground: 214 32% 91%;
+
+    --primary: 156 100% 50%;
+    --primary-foreground: 232 27% 4%;
+
+    --secondary: 328 100% 59%;
+    --secondary-foreground: 214 32% 96%;
+
+    --muted: 230 20% 14%;
+    --muted-foreground: 220 14% 62%;
+
+    --accent: 230 20% 14%;
+    --accent-foreground: 214 32% 91%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 214 32% 96%;
+
+    --border: 220 20% 100%;
+    --input: 230 20% 16%;
+    --ring: 156 100% 50%;
+
+    --radius: 0.9rem;
+
+    --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    background-image: radial-gradient(circle at 15% -10%, rgba(0, 255, 163, 0.08), transparent 45%),
+      radial-gradient(circle at 85% 0%, rgba(255, 46, 147, 0.06), transparent 40%);
+    background-attachment: fixed;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply border border-white/5 bg-white/[0.03] backdrop-blur-md;
+  }
+
+  .glass-panel {
+    @apply glass shadow-glass rounded-2xl;
+  }
+
+  .text-glow-mint {
+    text-shadow: 0 0 18px rgba(0, 255, 163, 0.55);
+  }
+
+  .text-glow-crimson {
+    text-shadow: 0 0 18px rgba(255, 46, 147, 0.55);
+  }
+
+  .border-glow-mint {
+    box-shadow:
+      0 0 0 1px rgba(0, 255, 163, 0.25) inset,
+      0 0 24px rgba(0, 255, 163, 0.18);
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 163, 0.25);
+    border-radius: 999px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
