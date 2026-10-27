@@ -37,3 +37,6 @@ next-env.d.ts
 # supabase
 supabase/.branches
 supabase/.temp
+
+# local trading data (file storage backend)
+.data/

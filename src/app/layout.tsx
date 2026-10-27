@@ -16,9 +16,9 @@ const fontMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Amogana — Move Money at the Speed of Light",
+  title: "Amogana — Auto-Trading Control Room",
   description:
-    "Amogana bridges Orange Money, myZaka, and Smega with global FX, remittance rails, and merchants like Deriv and Bet365.",
+    "Run, monitor and risk-manage trading bots across Exness (MetaTrader 5), Deriv and TradingView from one dashboard.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

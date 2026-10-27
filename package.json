@@ -2,13 +2,14 @@
   "name": "amogana",
   "version": "0.1.0",
   "private": true,
-  "description": "Amogana — a neo-futuristic currency transfer platform bridging African mobile money networks with global FX, remittance, trading, and merchant rails.",
+  "description": "Amogana — auto-trading control room for Exness (MT5), Deriv and TradingView bots with built-in risk management.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.2",
@@ -30,17 +31,20 @@
     "server-only": "^0.0.1",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
+    "ws": "^8.18.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.14.9",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
+    "@types/ws": "^8.5.12",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
     "eslint-config-next": "14.2.35",
     "postcss": "^8.5.16",
     "tailwindcss": "^3.4.14",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
   }
 }
