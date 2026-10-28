@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Download, RefreshCw, Trash2 } from "lucide-react";
 
 import { useDashboard } from "@/components/app/dashboard-context";
-import { BrokerStatusBadge, CopyRow, EmptyState, Field, LastSeen, Panel } from "@/components/app/widgets";
+import { useFeedback } from "@/components/app/feedback";
+import { BrokerStatusBadge, CopyRow, EmptyState, Field, LastSeen, PageHeader, Panel } from "@/components/app/widgets";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,12 +18,10 @@ export default function BrokersPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-liquid-platinum">Brokers</h1>
-        <p className="text-sm text-muted-foreground">
-          Connect a demo account first. Credentials are encrypted and only ever allowed to trade — never withdraw.
-        </p>
-      </div>
+      <PageHeader
+        title="Brokers"
+        description="Connect a demo account first. Credentials are encrypted and only ever allowed to trade — never withdraw."
+      />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <ExnessConnect onCreated={setBridge} />
@@ -48,15 +47,27 @@ export default function BrokersPage() {
 
 function BrokerRow({ broker }: { broker: PublicBroker }) {
   const { refresh } = useDashboard();
+  const { confirm, toast } = useFeedback();
   const [busy, setBusy] = useState(false);
   const act = async (method: "POST" | "DELETE") => {
-    if (method === "DELETE" && !window.confirm(`Disconnect ${broker.label}? Bots using it move back to paper.`)) return;
+    if (
+      method === "DELETE" &&
+      !(await confirm({
+        title: `Disconnect ${broker.label}?`,
+        description: "Bots using this account move back to paper trading and pause.",
+        confirmLabel: "Disconnect",
+        danger: true,
+      }))
+    ) {
+      return;
+    }
     setBusy(true);
     try {
       await api(`/api/brokers/${broker.id}`, method);
       await refresh();
+      toast(method === "DELETE" ? `${broker.label} disconnected` : "Account synced", "success");
     } catch (e) {
-      window.alert((e as Error).message);
+      toast((e as Error).message, "error");
     } finally {
       setBusy(false);
     }
@@ -93,6 +104,7 @@ function BrokerRow({ broker }: { broker: PublicBroker }) {
 
 function ExnessConnect({ onCreated }: { onCreated: (b: { key: string; label: string }) => void }) {
   const { refresh } = useDashboard();
+  const { toast } = useFeedback();
   const [label, setLabel] = useState("Exness MT5");
   const [busy, setBusy] = useState(false);
 
@@ -103,7 +115,7 @@ function ExnessConnect({ onCreated }: { onCreated: (b: { key: string; label: str
       onCreated({ key: res.bridge_key, label: res.broker.label });
       await refresh();
     } catch (e) {
-      window.alert((e as Error).message);
+      toast((e as Error).message, "error");
     } finally {
       setBusy(false);
     }
@@ -167,6 +179,7 @@ function BridgeInstructions({ bridgeKey, label, onDone }: { bridgeKey: string; l
 
 function DerivConnect() {
   const { refresh } = useDashboard();
+  const { toast } = useFeedback();
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -178,6 +191,7 @@ function DerivConnect() {
       await api("/api/brokers", "POST", { kind: "deriv", token, label: "Deriv" });
       setToken("");
       await refresh();
+      toast("Deriv account connected", "success");
     } catch (e) {
       setError((e as Error).message);
     } finally {

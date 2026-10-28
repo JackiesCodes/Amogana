@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 
 import { useDashboard } from "@/components/app/dashboard-context";
-import { Field, Meter, Panel } from "@/components/app/widgets";
+import { useFeedback } from "@/components/app/feedback";
+import { Field, Meter, PageHeader, PageSkeleton, Panel } from "@/components/app/widgets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api, money } from "@/lib/client";
@@ -21,6 +22,7 @@ type Key = (typeof FIELDS)[number]["key"];
 
 export default function RiskPage() {
   const { state, refresh } = useDashboard();
+  const { toast } = useFeedback();
   const [form, setForm] = useState<Record<Key, number> | null>(null);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -29,7 +31,7 @@ export default function RiskPage() {
     if (state && !form) setForm(Object.fromEntries(FIELDS.map((f) => [f.key, state.settings[f.key]])) as Record<Key, number>);
   }, [state, form]);
 
-  if (!state || !form) return null;
+  if (!state || !form) return <PageSkeleton />;
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,9 +40,10 @@ export default function RiskPage() {
       await api("/api/settings", "PATCH", form);
       await refresh();
       setSaved(true);
+      toast("Risk limits saved", "success");
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
-      window.alert((err as Error).message);
+      toast((err as Error).message, "error");
     } finally {
       setBusy(false);
     }
@@ -48,12 +51,10 @@ export default function RiskPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-liquid-platinum">Risk Guard</h1>
-        <p className="text-sm text-muted-foreground">
-          Hard limits checked before every order. These protect you from the one thing that ends trading careers: a bad day turning into a blown account.
-        </p>
-      </div>
+      <PageHeader
+        title="Risk Guard"
+        description="Hard limits checked before every order. These protect you from the one thing that ends trading careers: a bad day turning into a blown account."
+      />
 
       <div className="grid gap-4 lg:grid-cols-2">
         {(["live", "paper"] as const).map((book) => {
@@ -84,7 +85,7 @@ export default function RiskPage() {
               </Field>
             ))}
           </div>
-          <Button type="submit" disabled={busy}>
+          <Button type="submit" disabled={busy} className="w-full sm:w-auto">
             {saved ? "Saved ✓" : busy ? "Saving…" : "Save limits"}
           </Button>
         </form>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { useDashboard } from "@/components/app/dashboard-context";
-import { EmptyState, Panel } from "@/components/app/widgets";
+import { EmptyState, PageHeader, Panel, Segmented } from "@/components/app/widgets";
 import { cn } from "@/lib/utils";
 
 const LEVELS = ["all", "trade", "warn", "error", "info"] as const;
@@ -21,27 +21,28 @@ export default function LogsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-liquid-platinum">Alerts &amp; Logs</h1>
-          <p className="text-sm text-muted-foreground">Everything the engine did and why — newest first.</p>
-        </div>
-        <div className="flex gap-1 rounded-xl bg-white/[0.05] p-1 text-xs font-semibold">
-          {LEVELS.map((l) => (
-            <button key={l} onClick={() => setLevel(l)} className={cn("rounded-lg px-3 py-1.5 capitalize", level === l ? "bg-cyber-mint text-obsidian" : "text-muted-foreground")}>
-              {l}
-            </button>
-          ))}
-        </div>
-      </div>
+      <PageHeader
+        title="Alerts & Logs"
+        description="Everything the engine did and why — newest first."
+        action={
+          <Segmented
+            value={level}
+            onChange={setLevel}
+            className="w-full sm:w-auto"
+            options={LEVELS.map((l) => ({ value: l, label: l }))}
+          />
+        }
+      />
       <Panel>
         {logs.length ? (
           <ul className="divide-y divide-white/5 font-mono text-xs">
             {logs.map((l) => (
-              <li key={l.id} className="flex gap-3 py-2">
-                <span className="shrink-0 text-muted-foreground">{new Date(l.created_at).toLocaleString()}</span>
-                <span className={cn("w-12 shrink-0 uppercase", TONE[l.level])}>{l.level}</span>
-                <span className="min-w-0 break-words">{l.message}</span>
+              <li key={l.id} className="grid gap-x-3 gap-y-0.5 py-2.5 sm:grid-cols-[11rem_3.5rem_1fr]">
+                <span className="flex gap-3 text-muted-foreground sm:contents">
+                  <span>{new Date(l.created_at).toLocaleString(undefined, { dateStyle: "short", timeStyle: "medium" })}</span>
+                  <span className={cn("uppercase", TONE[l.level])}>{l.level}</span>
+                </span>
+                <span className="min-w-0 break-words font-sans text-[13px] sm:font-mono sm:text-xs">{l.message}</span>
               </li>
             ))}
           </ul>

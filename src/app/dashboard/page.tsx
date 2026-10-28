@@ -10,8 +10,11 @@ import {
   EmptyState,
   Kpi,
   Meter,
+  PageHeader,
+  PageSkeleton,
   Panel,
   PositionsTable,
+  Segmented,
 } from "@/components/app/widgets";
 import { money, pct, pnlClass } from "@/lib/client";
 import { timeframeLabel } from "@/lib/trading/symbols";
@@ -21,7 +24,7 @@ export default function OverviewPage() {
   const { state, error, view, setView } = useDashboard();
 
   if (!state) {
-    return <div className="py-20 text-center text-muted-foreground">{error ?? "Loading your trading desk…"}</div>;
+    return error ? <div className="py-20 text-center text-muted-foreground">{error}</div> : <PageSkeleton />;
   }
 
   const k = state.kpis[view];
@@ -38,31 +41,27 @@ export default function OverviewPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-liquid-platinum">Overview</h1>
-          <p className="text-sm text-muted-foreground">
-            {view === "paper" ? "Paper trading — simulated money on live prices." : "Live trading — real money on your connected accounts."}
-          </p>
-        </div>
-        <div className="flex rounded-xl bg-white/[0.05] p-1 text-sm font-semibold">
-          {(["paper", "live"] as const).map((b) => (
-            <button
-              key={b}
-              onClick={() => setView(b)}
-              className={cn(
-                "rounded-lg px-4 py-1.5 capitalize transition-colors",
-                view === b ? (b === "live" ? "bg-neon-crimson text-white" : "bg-cyber-mint text-obsidian") : "text-muted-foreground",
-              )}
-            >
-              {b}
-            </button>
-          ))}
-        </div>
-      </div>
+      <PageHeader
+        title="Overview"
+        description={view === "paper" ? "Paper trading — simulated money on live prices." : "Live trading — real money on your connected accounts."}
+        action={
+          <Segmented
+            value={view}
+            onChange={setView}
+            className="w-full sm:w-auto"
+            options={[
+              { value: "paper", label: "Paper" },
+              { value: "live", label: "Live", activeClass: "bg-neon-crimson text-white" },
+            ]}
+          />
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <Kpi label={view === "paper" ? "Paper equity" : "Total equity"} value={money(k.equity)} sub={view === "live" ? `${connected} connected account${connected === 1 ? "" : "s"}` : `Started at ${money(settings.paper_starting_balance)}`} />
+        <Kpi
+          className="col-span-2 lg:col-span-1"
+          label={view === "paper" ? "Paper equity" : "Total equity"}
+          value={money(k.equity)} sub={view === "live" ? `${connected} connected account${connected === 1 ? "" : "s"}` : `Started at ${money(settings.paper_starting_balance)}`} />
         <Kpi label="Today P&L" value={money(k.today_pnl, "USD", true)} tone={pnlClass(k.today_pnl)} sub="Since 00:00 UTC" />
         <Kpi label="Open positions" value={String(k.open_positions)} sub={`Limit ${settings.max_open_trades}`} />
         <Kpi

@@ -2,10 +2,11 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Pause, Play, Trash2 } from "lucide-react";
+import { Pause, Play, Plus, Trash2 } from "lucide-react";
 
 import { useDashboard } from "@/components/app/dashboard-context";
-import { BotStatusBadge, CopyRow, EmptyState, Field, Panel, selectClass } from "@/components/app/widgets";
+import { useFeedback } from "@/components/app/feedback";
+import { BotStatusBadge, CopyRow, EmptyState, Field, PageHeader, PageSkeleton, Panel, selectClass } from "@/components/app/widgets";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -42,17 +43,19 @@ function BotsPageInner() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-liquid-platinum">Bots</h1>
-          <p className="text-sm text-muted-foreground">
-            Built-in bots trade a Strategy Lab strategy on their own. TradingView bots execute your Pine Script alerts.
-          </p>
-        </div>
-        <Button onClick={() => setCreating(true)}>+ New bot</Button>
-      </div>
+      <PageHeader
+        title="Bots"
+        description="Built-in bots trade a Strategy Lab strategy on their own. TradingView bots execute your Pine Script alerts."
+        action={
+          <Button onClick={() => setCreating(true)} className="w-full sm:w-auto">
+            <Plus /> New bot
+          </Button>
+        }
+      />
 
-      {!state ? null : state.bots.length ? (
+      {!state ? (
+        <PageSkeleton />
+      ) : state.bots.length ? (
         <div className="grid gap-4 xl:grid-cols-2">
           {state.bots.map((bot) => (
             <BotCard key={bot.id} bot={bot} brokers={state.brokers} />
@@ -63,7 +66,7 @@ function BotsPageInner() {
       )}
 
       <Dialog open={creating} onOpenChange={closeDialog}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+        <DialogContent className="sm:max-h-[90vh] sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>New bot</DialogTitle>
             <DialogDescription>Starts paused in Paper mode. Switch to Live once you are happy with how it behaves.</DialogDescription>
@@ -269,6 +272,7 @@ function BotForm({ brokers, onDone }: { brokers: PublicBroker[]; onDone: () => v
 
 function BotCard({ bot, brokers }: { bot: Bot; brokers: PublicBroker[] }) {
   const { state, refresh } = useDashboard();
+  const { confirm, toast } = useFeedback();
   const [busy, setBusy] = useState(false);
   const [showWebhook, setShowWebhook] = useState(false);
   const broker = brokers.find((b) => b.id === bot.broker_account_id);
@@ -279,31 +283,74 @@ function BotCard({ bot, brokers }: { bot: Bot; brokers: PublicBroker[] }) {
   const wins = closed.filter((t) => t.pnl > 0).length;
   const strategy = bot.strategy ? getStrategy(bot.strategy.id) : undefined;
 
-  const run = async (fn: () => Promise<unknown>) => {
+  const run = async (fn: () => Promise<unknown>, success?: string) => {
     setBusy(true);
     try {
       await fn();
       await refresh();
+      if (success) toast(success, "success");
     } catch (e) {
-      window.alert((e as Error).message);
+      toast((e as Error).message, "error");
     } finally {
       setBusy(false);
     }
   };
 
-  const patch = (body: Record<string, unknown>) => run(() => api(`/api/bots/${bot.id}`, "PATCH", body));
-  const signal = (action: "buy" | "sell" | "close") => {
-    if (bot.book === "live" && !window.confirm(`Send a LIVE ${action.toUpperCase()} order for ${bot.symbol}?`)) return;
-    return run(() => api(`/api/bots/${bot.id}/signal`, "POST", { action }));
+  const patch = (body: Record<string, unknown>, success?: string) => run(() => api(`/api/bots/${bot.id}`, "PATCH", body), success);
+
+  const signal = async (action: "buy" | "sell" | "close") => {
+    if (
+      bot.book === "live" &&
+      !(await confirm({
+        title: `Send a live ${action.toUpperCase()} order?`,
+        description: `${bot.symbol} on ${broker?.label ?? "your broker"}. This uses real money and passes through Risk Guard first.`,
+        confirmLabel: `${action === "close" ? "Close" : action === "buy" ? "Buy" : "Sell"} now`,
+        danger: true,
+      }))
+    ) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/bots/${bot.id}/signal`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const result = (await res.json()) as { status?: string; reason?: string | null };
+      await refresh();
+      if (result.status === "accepted") toast(action === "close" ? "Close order sent" : `${action.toUpperCase()} order sent`, "success");
+      else toast(result.reason ?? "Order rejected", "error");
+    } catch (e) {
+      toast((e as Error).message, "error");
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const switchBook = () => {
+  const switchBook = async () => {
     if (bot.book === "paper") {
-      if (!broker) return window.alert("Pick a broker account first (Brokers page), then edit the bot.");
-      if (!window.confirm(`Switch "${bot.name}" to LIVE trading on ${broker.label}? It will trade real money.`)) return;
-      return patch({ book: "live", status: "paused" });
+      if (!broker) return toast("Choose a broker account for this bot first (Broker selector below).", "error");
+      const ok = await confirm({
+        title: "Switch to live trading?",
+        description: `"${bot.name}" will trade real money on ${broker.label}. It stays paused until you press Start.`,
+        confirmLabel: "Go live",
+        danger: true,
+      });
+      if (!ok) return;
+      return patch({ book: "live", status: "paused" }, "Bot switched to live — press Start when ready");
     }
-    return patch({ book: "paper", status: "paused" });
+    return patch({ book: "paper", status: "paused" }, "Bot moved back to paper");
+  };
+
+  const remove = async () => {
+    const ok = await confirm({
+      title: `Delete "${bot.name}"?`,
+      description: "Its open trades will be closed. This can't be undone.",
+      confirmLabel: "Delete bot",
+      danger: true,
+    });
+    if (ok) await run(() => api(`/api/bots/${bot.id}`, "DELETE"), "Bot deleted");
   };
 
   return (
@@ -324,53 +371,49 @@ function BotCard({ bot, brokers }: { bot: Bot; brokers: PublicBroker[] }) {
         <BotStatusBadge bot={bot} />
       </div>
 
-      <div className="mt-4 grid grid-cols-4 gap-2 text-center">
+      <div className="mt-4 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
         <Stat label="P&L" value={money(pnl, "USD", true)} className={pnlClass(pnl)} />
         <Stat label="Open" value={String(open.length)} />
         <Stat label="Closed" value={String(closed.length)} />
         <Stat label="Win rate" value={closed.length ? `${Math.round((wins / closed.length) * 100)}%` : "—"} />
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {bot.status === "running" ? (
-          <Button size="sm" variant="outline" disabled={busy} onClick={() => patch({ status: "paused" })}>
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => patch({ status: "paused" }, "Bot paused")} className="col-span-2 sm:col-span-1">
             <Pause /> Pause
           </Button>
         ) : (
-          <Button size="sm" disabled={busy} onClick={() => patch({ status: "running" })}>
+          <Button size="sm" disabled={busy} onClick={() => patch({ status: "running" }, "Bot started")} className="col-span-2 sm:col-span-1">
             <Play /> Start
           </Button>
         )}
-        <Button size="sm" variant="outline" disabled={busy} onClick={() => signal("buy")}>
-          Buy now
+        <Button size="sm" variant="outline" disabled={busy} onClick={() => signal("buy")} className="text-cyber-mint">
+          Buy
         </Button>
-        <Button size="sm" variant="outline" disabled={busy} onClick={() => signal("sell")}>
-          Sell now
+        <Button size="sm" variant="outline" disabled={busy} onClick={() => signal("sell")} className="text-neon-crimson">
+          Sell
         </Button>
-        <Button size="sm" variant="outline" disabled={busy || !open.length} onClick={() => signal("close")}>
+        <Button size="sm" variant="outline" disabled={busy || !open.length} onClick={() => signal("close")} className="col-span-2 sm:col-span-1">
           Close position
         </Button>
+      </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-1">
         <Button size="sm" variant="ghost" disabled={busy} onClick={switchBook}>
           {bot.book === "paper" ? "Go live →" : "Back to paper"}
         </Button>
         {bot.source === "tradingview" && (
           <Button size="sm" variant="ghost" onClick={() => setShowWebhook((v) => !v)}>
-            {showWebhook ? "Hide" : "TradingView setup"}
+            {showWebhook ? "Hide setup" : "TradingView setup"}
           </Button>
         )}
-        <Button
-          size="sm"
-          variant="ghost"
-          className="ml-auto text-neon-crimson"
-          disabled={busy}
-          onClick={() => window.confirm(`Delete "${bot.name}"? Its open trades will be closed.`) && run(() => api(`/api/bots/${bot.id}`, "DELETE"))}
-          aria-label="Delete bot"
-        >
+        <Button size="sm" variant="ghost" className="ml-auto text-neon-crimson" disabled={busy} onClick={remove} aria-label="Delete bot">
           <Trash2 />
         </Button>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-white/5 pt-3 text-xs text-muted-foreground">
         <label className="flex items-center gap-2">
           Risk %
           <input
@@ -379,17 +422,17 @@ function BotCard({ bot, brokers }: { bot: Bot; brokers: PublicBroker[] }) {
             min="0.1"
             max="5"
             defaultValue={bot.risk_percent}
-            onBlur={(e) => Number(e.target.value) !== bot.risk_percent && patch({ risk_percent: Number(e.target.value) })}
-            className="w-16 rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-foreground"
+            onBlur={(e) => Number(e.target.value) !== bot.risk_percent && patch({ risk_percent: Number(e.target.value) }, "Risk updated")}
+            className="h-8 w-16 rounded-lg border border-white/10 bg-white/[0.03] px-2 text-base text-foreground sm:text-xs"
           />
         </label>
         <label className="flex items-center gap-2">
           Broker
           <select
             value={bot.broker_account_id ?? ""}
-            onChange={(e) => patch({ broker_account_id: e.target.value || null })}
+            onChange={(e) => patch({ broker_account_id: e.target.value || null }, "Broker updated")}
             disabled={bot.book === "live"}
-            className="rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-foreground [&>option]:bg-obsidian"
+            className="h-8 max-w-[11rem] rounded-lg border border-white/10 bg-white/[0.03] px-2 text-base text-foreground sm:text-xs [&>option]:bg-obsidian"
           >
             <option value="">None</option>
             {brokers.map((b) => (

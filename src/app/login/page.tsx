@@ -2,7 +2,9 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { Lock, ShieldCheck } from "lucide-react";
 
+import { BrandMark, Wordmark } from "@/components/app/brand";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/client";
@@ -36,20 +38,46 @@ function LoginForm() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <form onSubmit={submit} className="glass-panel w-full max-w-sm space-y-4 p-6">
-        <div>
-          <div className="text-xl font-extrabold tracking-[0.08em] text-liquid-platinum">
-            AMOGANA<span className="text-cyber-mint">.</span>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">Auto-trading control room</p>
+    <main className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-5 py-[max(2rem,env(safe-area-inset-top))]">
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-grid-glow bg-grid opacity-40 [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_70%)]" />
+      <div className="relative w-full max-w-sm">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <BrandMark className="h-14 w-14 drop-shadow-[0_0_24px_rgba(0,255,163,0.35)]" />
+          <Wordmark className="mt-4 text-2xl" />
+          <p className="mt-2 text-sm text-muted-foreground">Auto-trading control room</p>
         </div>
-        <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus />
-        {error && <p className="text-sm text-neon-crimson">{error}</p>}
-        <Button type="submit" className="w-full" disabled={busy || !password}>
-          {busy ? "Checking…" : "Enter"}
-        </Button>
-      </form>
+
+        <form onSubmit={submit} className="glass-panel space-y-4 p-6">
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Password</span>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoFocus
+                autoComplete="current-password"
+                className="pl-10"
+                aria-invalid={Boolean(error)}
+              />
+            </div>
+          </label>
+          {error && (
+            <p role="alert" className="rounded-lg bg-neon-crimson/10 px-3 py-2 text-sm text-neon-crimson">
+              {error}
+            </p>
+          )}
+          <Button type="submit" className="w-full" disabled={busy || !password}>
+            {busy ? "Signing in…" : "Sign in"}
+          </Button>
+        </form>
+
+        <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+          <ShieldCheck className="h-3.5 w-3.5 text-cyber-mint" />
+          Encrypted session · broker keys never leave the server
+        </p>
+      </div>
     </main>
   );
 }

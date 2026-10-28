@@ -4,7 +4,7 @@ import { SESSION_COOKIE, isAuthConfigured, verifySessionToken } from "@/lib/auth
 
 // Machine-to-machine endpoints authenticate themselves (webhook passphrase,
 // MT5 bridge key, cron secret) and must stay reachable without a browser session.
-const PUBLIC_PREFIXES = ["/login", "/api/auth/", "/api/webhooks/", "/api/mt5/", "/api/cron/", "/downloads/"];
+const PUBLIC_PREFIXES = ["/login", "/api/auth/", "/api/webhooks/", "/api/mt5/", "/api/cron/", "/downloads/", "/icons/", "/manifest.webmanifest", "/icon.svg", "/apple-icon"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

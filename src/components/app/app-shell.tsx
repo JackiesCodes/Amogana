@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Activity,
   Bot,
@@ -10,149 +10,311 @@ import {
   FlaskConical,
   LayoutDashboard,
   LogOut,
+  MoreHorizontal,
   Octagon,
   PlugZap,
+  Plus,
   ScrollText,
   ShieldCheck,
 } from "lucide-react";
 
+import { BrandMark, Wordmark } from "@/components/app/brand";
 import { DashboardProvider, useDashboard } from "@/components/app/dashboard-context";
+import { FeedbackProvider, useFeedback } from "@/components/app/feedback";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { api, timeAgo } from "@/lib/client";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/bots", label: "Bots", icon: Bot },
-  { href: "/dashboard/brokers", label: "Brokers", icon: PlugZap },
-  { href: "/dashboard/trades", label: "Trades", icon: CandlestickChart },
-  { href: "/dashboard/strategy-lab", label: "Strategy Lab", icon: FlaskConical },
-  { href: "/dashboard/risk", label: "Risk Guard", icon: ShieldCheck },
-  { href: "/dashboard/logs", label: "Alerts & Logs", icon: ScrollText },
+  { href: "/dashboard", label: "Overview", short: "Home", icon: LayoutDashboard },
+  { href: "/dashboard/bots", label: "Bots", short: "Bots", icon: Bot },
+  { href: "/dashboard/trades", label: "Trades", short: "Trades", icon: CandlestickChart },
+  { href: "/dashboard/strategy-lab", label: "Strategy Lab", short: "Lab", icon: FlaskConical },
+  { href: "/dashboard/brokers", label: "Brokers", short: "Brokers", icon: PlugZap },
+  { href: "/dashboard/risk", label: "Risk Guard", short: "Risk", icon: ShieldCheck },
+  { href: "/dashboard/logs", label: "Alerts & Logs", short: "Logs", icon: ScrollText },
 ];
+
+// Phones show the first four in the tab bar; the rest live under "More".
+const TAB_COUNT = 4;
+
+function isActive(pathname: string, href: string) {
+  return href === "/dashboard" ? pathname === href : pathname.startsWith(href);
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <DashboardProvider>
-      <div className="flex min-h-screen flex-col lg:flex-row">
-        <Sidebar />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <TopBar />
-          <main className="flex-1 px-4 pb-10 pt-4 sm:px-6 lg:px-8">{children}</main>
+    <FeedbackProvider>
+      <DashboardProvider>
+        <div className="flex min-h-[100dvh] flex-col lg:flex-row">
+          <Sidebar />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <TopBar />
+            <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 lg:px-8 lg:pb-10 lg:pt-6">
+              {children}
+            </main>
+          </div>
+          <TabBar />
         </div>
+      </DashboardProvider>
+    </FeedbackProvider>
+  );
+}
+
+function Logo({ className }: { className?: string }) {
+  return (
+    <Link href="/dashboard" className={cn("flex items-center gap-2", className)}>
+      <BrandMark />
+      <Wordmark />
+    </Link>
+  );
+}
+
+function EngineStatus({ compact = false }: { compact?: boolean }) {
+  const { state, lastTick, error } = useDashboard();
+  const ok = !error && Boolean(lastTick);
+  if (compact) {
+    return (
+      <span className={cn("flex items-center gap-1.5 text-xs", ok ? "text-cyber-mint" : "text-amber-300")}>
+        <span className={cn("h-2 w-2 rounded-full", ok ? "animate-pulse bg-cyber-mint" : "bg-amber-300")} />
+        {ok ? "Live" : "Connecting"}
+      </span>
+    );
+  }
+  const brokersUp = state?.brokers.filter((b) => b.status === "connected").length ?? 0;
+  return (
+    <div className="glass rounded-xl p-3 text-xs">
+      <div className="uppercase tracking-widest text-muted-foreground">Engine</div>
+      <div className={cn("mt-2 flex items-center gap-2", ok ? "text-cyber-mint" : "text-amber-300")}>
+        <Activity className="h-3.5 w-3.5" />
+        {lastTick ? `Ran ${timeAgo(lastTick)}` : "Starting…"}
       </div>
-    </DashboardProvider>
+      <div className="mt-1 text-muted-foreground">
+        {brokersUp} broker{brokersUp === 1 ? "" : "s"} connected
+      </div>
+    </div>
   );
 }
 
 function Sidebar() {
   const pathname = usePathname();
-  const { state, lastTick } = useDashboard();
-  const brokersUp = state?.brokers.filter((b) => b.status === "connected").length ?? 0;
-
   return (
-    <aside className="border-b border-white/5 lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-60 lg:flex-col lg:border-b-0 lg:border-r">
-      <div className="flex items-center justify-between px-5 py-4 lg:py-6">
-        <Link href="/dashboard" className="text-lg font-extrabold tracking-[0.08em] text-liquid-platinum">
-          AMOGANA<span className="text-cyber-mint">.</span>
-        </Link>
+    <aside className="hidden border-r border-white/5 lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-60 lg:shrink-0 lg:flex-col">
+      <div className="px-5 py-6">
+        <Logo className="text-lg" />
       </div>
-      <nav className="scrollbar-thin flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:overflow-visible">
-        {NAV.map(({ href, label, icon: Icon }) => {
-          const active = href === "/dashboard" ? pathname === href : pathname.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
-                active ? "bg-cyber-mint/10 text-cyber-mint" : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {label}
-            </Link>
-          );
-        })}
+      <nav className="flex flex-col gap-1 px-3">
+        {NAV.map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className={cn(
+              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
+              isActive(pathname, href)
+                ? "bg-cyber-mint/10 font-medium text-cyber-mint"
+                : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
+            )}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+          </Link>
+        ))}
       </nav>
-      <div className="mt-auto hidden p-3 lg:block">
-        <div className="glass rounded-xl p-3 text-xs">
-          <div className="uppercase tracking-widest text-muted-foreground">Engine</div>
-          <div className="mt-2 flex items-center gap-2 text-cyber-mint">
-            <Activity className="h-3.5 w-3.5" />
-            {lastTick ? `Ran ${timeAgo(lastTick)}` : "Starting…"}
-          </div>
-          <div className="mt-1 text-muted-foreground">
-            {brokersUp} broker{brokersUp === 1 ? "" : "s"} connected · {state?.meta.backend === "supabase" ? "Supabase" : "Local file"} storage
-          </div>
-        </div>
+      <div className="mt-auto p-3">
+        <EngineStatus />
       </div>
     </aside>
   );
 }
 
-function TopBar() {
+function useKillSwitch() {
   const { state, refresh } = useDashboard();
+  const { confirm, toast } = useFeedback();
   const [busy, setBusy] = useState(false);
-  const killOn = state?.settings.kill_switch ?? false;
+  const on = state?.settings.kill_switch ?? false;
 
-  const toggleKill = async () => {
-    const msg = killOn
-      ? "Release the kill switch? Bots stay paused until you start them again."
-      : "KILL SWITCH: pause every bot and close every open position (including other EAs on your MT5 accounts)?";
-    if (!window.confirm(msg)) return;
+  const toggle = async () => {
+    const ok = await confirm(
+      on
+        ? {
+            title: "Release the kill switch?",
+            description: "Bots stay paused until you start each one again.",
+            confirmLabel: "Release",
+          }
+        : {
+            title: "Activate kill switch?",
+            description:
+              "Every bot pauses and every open position closes — including positions from other EAs on your MT5 accounts.",
+            confirmLabel: "Stop everything",
+            danger: true,
+          },
+    );
+    if (!ok) return;
     setBusy(true);
     try {
-      await api("/api/kill-switch", "POST", { on: !killOn });
+      await api("/api/kill-switch", "POST", { on: !on });
       await refresh();
+      toast(on ? "Kill switch released" : "Kill switch active — all bots paused", on ? "success" : "error");
     } catch (e) {
-      window.alert((e as Error).message);
+      toast((e as Error).message, "error");
     } finally {
       setBusy(false);
     }
   };
 
-  const logout = async () => {
-    await api("/api/auth/logout", "POST").catch(() => undefined);
-    window.location.href = "/login";
-  };
+  return { on, busy, toggle, ready: Boolean(state) };
+}
+
+async function logout() {
+  await api("/api/auth/logout", "POST").catch(() => undefined);
+  window.location.href = "/login";
+}
+
+function TopBar() {
+  const { state } = useDashboard();
+  const kill = useKillSwitch();
+  const running = state?.bots.filter((b) => b.status === "running").length ?? 0;
 
   return (
-    <header className="sticky top-0 z-30 border-b border-white/5 bg-obsidian/80 px-4 py-3 backdrop-blur-md sm:px-6 lg:px-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm text-muted-foreground">
+    <header className="sticky top-0 z-30 border-b border-white/5 bg-obsidian/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+      <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6 lg:h-16 lg:px-8">
+        {/* Phones */}
+        <div className="flex items-center gap-3 lg:hidden">
+          <Logo className="text-base" />
+          <EngineStatus compact />
+        </div>
+        {/* Desktop */}
+        <div className="hidden items-center gap-4 text-sm text-muted-foreground lg:flex">
+          <EngineStatus compact />
           {state ? (
-            <>
-              <span className="text-foreground">{state.bots.filter((b) => b.status === "running").length}</span> bots running ·{" "}
+            <span>
+              <span className="text-foreground">{running}</span> bots running ·{" "}
               <span className="text-foreground">{state.open_trades.length}</span> open positions
-            </>
+            </span>
           ) : (
-            "Loading…"
+            <span className="h-4 w-48 animate-pulse rounded bg-white/5" />
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/dashboard/brokers">+ Connect broker</Link>
+
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild className="hidden lg:inline-flex">
+            <Link href="/dashboard/brokers">
+              <PlugZap /> Connect broker
+            </Link>
           </Button>
-          <Button size="sm" asChild>
-            <Link href="/dashboard/bots?new=1">+ New bot</Link>
+          <Button size="sm" asChild className="hidden lg:inline-flex">
+            <Link href="/dashboard/bots?new=1">
+              <Plus /> New bot
+            </Link>
           </Button>
-          <Button variant={killOn ? "outline" : "destructive"} size="sm" onClick={toggleKill} disabled={busy || !state}>
+          <Button
+            variant={kill.on ? "outline" : "destructive"}
+            size="sm"
+            onClick={kill.toggle}
+            disabled={kill.busy || !kill.ready}
+            aria-label={kill.on ? "Release kill switch" : "Kill switch"}
+            className="px-3"
+          >
             <Octagon />
-            {killOn ? "Release kill switch" : "Kill switch"}
+            <span className="sm:hidden">{kill.on ? "Release" : "Stop all"}</span>
+            <span className="hidden sm:inline">{kill.on ? "Release kill switch" : "Kill switch"}</span>
           </Button>
           {state?.meta.auth && (
-            <Button variant="ghost" size="icon" onClick={logout} aria-label="Log out">
+            <Button variant="ghost" size="icon" onClick={logout} aria-label="Log out" className="hidden lg:inline-flex">
               <LogOut />
             </Button>
           )}
         </div>
       </div>
-      {killOn && (
-        <div className="mt-3 rounded-xl border border-neon-crimson/40 bg-neon-crimson/10 px-4 py-2 text-sm text-neon-crimson">
-          Kill switch is ON — no new trades will be placed. Release it, then start bots individually.
+      {kill.on && (
+        <div className="border-t border-neon-crimson/30 bg-neon-crimson/10 px-4 py-2 text-center text-xs font-medium text-neon-crimson sm:text-sm">
+          Kill switch is ON — no new trades will be placed.
         </div>
       )}
     </header>
+  );
+}
+
+function TabBar() {
+  const pathname = usePathname();
+  const { state } = useDashboard();
+  const [moreOpen, setMoreOpen] = useState(false);
+  const tabs = NAV.slice(0, TAB_COUNT);
+  const more = NAV.slice(TAB_COUNT);
+  const moreActive = more.some((n) => isActive(pathname, n.href));
+
+  useEffect(() => setMoreOpen(false), [pathname]);
+
+  return (
+    <>
+      <nav
+        aria-label="Main"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-obsidian/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
+      >
+        <div className="grid grid-cols-5">
+          {tabs.map(({ href, short, icon: Icon }) => {
+            const active = isActive(pathname, href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors",
+                  active ? "text-cyber-mint" : "text-muted-foreground",
+                )}
+              >
+                <Icon className={cn("h-5 w-5", active && "drop-shadow-[0_0_8px_rgba(0,255,163,0.6)]")} />
+                {short}
+              </Link>
+            );
+          })}
+          <button
+            onClick={() => setMoreOpen(true)}
+            className={cn(
+              "flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium",
+              moreActive ? "text-cyber-mint" : "text-muted-foreground",
+            )}
+          >
+            <MoreHorizontal className="h-5 w-5" />
+            More
+          </button>
+        </div>
+      </nav>
+
+      <Dialog open={moreOpen} onOpenChange={setMoreOpen}>
+        <DialogContent className="lg:hidden">
+          <DialogHeader>
+            <DialogTitle>More</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-2">
+            <Link href="/dashboard/bots?new=1" className="flex items-center gap-2 rounded-xl bg-cyber-mint px-3 py-3 text-sm font-semibold text-obsidian">
+              <Plus className="h-4 w-4" /> New bot
+            </Link>
+            <Link href="/dashboard/brokers" className="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-3 text-sm">
+              <PlugZap className="h-4 w-4" /> Connect broker
+            </Link>
+          </div>
+          <div className="divide-y divide-white/5 rounded-xl border border-white/10">
+            {more.map(({ href, label, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className={cn("flex items-center gap-3 px-4 py-3.5 text-sm", isActive(pathname, href) ? "text-cyber-mint" : "text-foreground")}
+              >
+                <Icon className="h-4 w-4 text-muted-foreground" />
+                {label}
+              </Link>
+            ))}
+            {state?.meta.auth && (
+              <button onClick={logout} className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm text-neon-crimson">
+                <LogOut className="h-4 w-4" /> Log out
+              </button>
+            )}
+          </div>
+          <EngineStatus />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
