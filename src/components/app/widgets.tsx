@@ -86,7 +86,7 @@ export function PageSkeleton() {
   );
 }
 
-/** Segmented control (Paper / Live, filters…). */
+/** Segmented control (Real / Demo accounts, filters…). */
 export function Segmented<T extends string>({
   value,
   options,
@@ -211,6 +211,21 @@ export function BotStatusBadge({ bot }: { bot: Bot }) {
   );
 }
 
+/** REAL (gold) or DEMO, straight from the broker account. */
+export function AccountKindBadge({ broker, className }: { broker: Pick<PublicBroker, "is_demo"> | null | undefined; className?: string }) {
+  if (!broker) return <Badge variant="warning" className={className}>NO ACCOUNT</Badge>;
+  return broker.is_demo ? (
+    <Badge variant="default" className={className}>DEMO</Badge>
+  ) : (
+    <Badge variant="gold" className={className}>REAL</Badge>
+  );
+}
+
+/** REAL / DEMO as recorded on the trade (the account's kind when it was opened). */
+export function TradeKindBadge({ trade, className }: { trade: Pick<Trade, "book">; className?: string }) {
+  return <AccountKindBadge broker={{ is_demo: trade.book === "demo" }} className={className} />;
+}
+
 export function BrokerStatusBadge({ broker }: { broker: PublicBroker }) {
   if (broker.status === "connected") return <Badge variant="profit">● Connected</Badge>;
   if (broker.status === "waiting") return <Badge variant="warning">● Waiting for bridge</Badge>;
@@ -227,9 +242,12 @@ export function PositionsTable({ trades, showBook = false }: { trades: Trade[]; 
   const close = async (trade: Trade) => {
     const ok = await confirm({
       title: `Close ${trade.side.toUpperCase()} ${trade.symbol}?`,
-      description: trade.book === "live" ? "This closes a real position at the current market price." : "Closes the paper position at the current price.",
+      description:
+        trade.book === "real"
+          ? "This closes a real-money position at the current market price."
+          : "Closes this demo-account position at the current market price.",
       confirmLabel: "Close position",
-      danger: trade.book === "live",
+      danger: trade.book === "real",
     });
     if (!ok) return;
     setClosing(trade.id);
@@ -258,7 +276,7 @@ export function PositionsTable({ trades, showBook = false }: { trades: Trade[]; 
     );
   const botLabel = (t: Trade) =>
     (t.bot_id && bots.get(t.bot_id)?.name) || (t.external ? `Other EA / manual${t.magic ? ` #${t.magic}` : ""}` : "—");
-  const account = (t: Trade) => (t.book === "paper" ? "Paper" : (t.broker_account_id && brokers.get(t.broker_account_id)?.label) || "—");
+  const account = (t: Trade) => (t.broker_account_id && brokers.get(t.broker_account_id)?.label) || "—";
   const currency = (t: Trade) => (t.broker_account_id && brokers.get(t.broker_account_id)?.currency) || "USD";
 
   return (
@@ -279,7 +297,7 @@ export function PositionsTable({ trades, showBook = false }: { trades: Trade[]; 
                   >
                     {t.side.toUpperCase()}
                   </span>
-                  {showBook && t.book === "live" && <Badge variant="gold">LIVE</Badge>}
+                  {showBook && <TradeKindBadge trade={t} />}
                 </div>
                 <div className="mt-0.5 truncate text-xs text-muted-foreground">
                   {botLabel(t)} · {account(t)}
@@ -351,8 +369,8 @@ export function PositionsTable({ trades, showBook = false }: { trades: Trade[]; 
                 </td>
                 <td className="px-2 py-2.5">{bot?.name ?? (t.external ? <span className="text-muted-foreground">Other EA / manual{t.magic ? ` #${t.magic}` : ""}</span> : "—")}</td>
                 <td className="px-2 py-2.5 text-muted-foreground">
-                  {t.book === "paper" ? "Paper" : broker?.label ?? "—"}
-                  {showBook && t.book === "live" && <Badge variant="gold" className="ml-2">LIVE</Badge>}
+                  {broker?.label ?? "—"}
+                  {showBook && <TradeKindBadge trade={t} className="ml-2" />}
                 </td>
                 <td className={cn("px-2 py-2.5 text-right font-mono", pnlClass(t.pnl))}>{money(t.pnl, broker?.currency, true)}</td>
                 <td className="px-2 py-2.5 text-right">

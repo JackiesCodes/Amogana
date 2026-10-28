@@ -1,12 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Pause, Play, Plus, Trash2 } from "lucide-react";
 
 import { useDashboard } from "@/components/app/dashboard-context";
 import { useFeedback } from "@/components/app/feedback";
-import { BotStatusBadge, CopyRow, EmptyState, Field, PageHeader, PageSkeleton, Panel, selectClass } from "@/components/app/widgets";
+import { AccountKindBadge, BotStatusBadge, CopyRow, EmptyState, Field, PageHeader, PageSkeleton, Panel, selectClass } from "@/components/app/widgets";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -62,16 +63,31 @@ function BotsPageInner() {
           ))}
         </div>
       ) : (
-        <EmptyState>No bots yet. New bots start in Paper mode so you can watch them before risking money.</EmptyState>
+        <EmptyState>
+          No bots yet. A bot trades on the broker account you choose — use a demo account to practise before trading real money.
+        </EmptyState>
       )}
 
       <Dialog open={creating} onOpenChange={closeDialog}>
         <DialogContent className="sm:max-h-[90vh] sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>New bot</DialogTitle>
-            <DialogDescription>Starts paused in Paper mode. Switch to Live once you are happy with how it behaves.</DialogDescription>
+            <DialogDescription>
+              The bot trades on the account you choose: a demo account uses your broker&apos;s demo money, a real account uses real money.
+              It starts paused.
+            </DialogDescription>
           </DialogHeader>
-          {state && <BotForm brokers={state.brokers} onDone={() => closeDialog(false)} />}
+          {state &&
+            (state.brokers.length ? (
+              <BotForm brokers={state.brokers} onDone={() => closeDialog(false)} />
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Connect an Exness or Deriv account first — every bot trades on one of your accounts.</p>
+                <Button asChild className="w-full">
+                  <Link href="/dashboard/brokers">Connect a broker account</Link>
+                </Button>
+              </div>
+            ))}
         </DialogContent>
       </Dialog>
     </div>
@@ -109,6 +125,13 @@ function BotForm({ brokers, onDone }: { brokers: PublicBroker[]; onDone: () => v
 
   const isMt5 = broker?.kind === "mt5";
 
+  // MT5 brokers name symbols like "EURUSD"/"EURUSDm"; Deriv uses its own codes ("frxEURUSD").
+  useEffect(() => {
+    if (isMt5 && /^(frx|cry)/.test(symbol)) setSymbol(symbol.slice(3));
+    if (!isMt5 && !DATA_SYMBOLS.some((d) => d.value === symbol)) setSymbol(dataSymbol);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMt5]);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
@@ -117,8 +140,7 @@ function BotForm({ brokers, onDone }: { brokers: PublicBroker[]; onDone: () => v
       await api("/api/bots", "POST", {
         name: name || `${source === "builtin" ? def.name : "TradingView"} · ${symbol}`,
         source,
-        book: "paper",
-        broker_account_id: brokerId || null,
+        broker_account_id: brokerId,
         symbol,
         data_symbol: isMt5 ? dataSymbol : symbol,
         timeframe,
@@ -160,12 +182,20 @@ function BotForm({ brokers, onDone }: { brokers: PublicBroker[]; onDone: () => v
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. EURUSD Trend Rider" />
       </Field>
 
-      <Field label="Broker account (for when you go live)" hint={!brokers.length ? "No broker connected yet — the bot can still paper trade." : undefined}>
+      <Field
+        label="Broker account"
+        hint={
+          broker
+            ? broker.is_demo
+              ? "Demo account — trades use your broker's demo money."
+              : "Real account — trades use real money."
+            : undefined
+        }
+      >
         <select className={selectClass} value={brokerId} onChange={(e) => setBrokerId(e.target.value)}>
-          <option value="">None (paper only)</option>
           {brokers.map((b) => (
             <option key={b.id} value={b.id}>
-              {b.label} {b.kind === "mt5" ? "(MT5)" : "(Deriv)"}
+              {b.label} · {b.kind === "mt5" ? "MT5" : "Deriv"} · {b.is_demo ? "Demo" : "Real"}
             </option>
           ))}
         </select>
@@ -183,7 +213,7 @@ function BotForm({ brokers, onDone }: { brokers: PublicBroker[]; onDone: () => v
                 }}
               />
             </Field>
-            <Field label="Price feed" hint="Market used for signals and paper prices.">
+            <Field label="Price feed" hint="Market data the strategy reads its signals from.">
               <select className={selectClass} value={dataSymbol} onChange={(e) => setDataSymbol(e.target.value)}>
                 {!DATA_SYMBOLS.some((d) => d.value === dataSymbol) && <option value={dataSymbol}>{dataSymbol}</option>}
                 {DATA_SYMBOLS.map((d) => (
@@ -262,7 +292,7 @@ function BotForm({ brokers, onDone }: { brokers: PublicBroker[]; onDone: () => v
 
       {error && <p className="text-sm text-loss">{error}</p>}
       <Button type="submit" className="w-full" disabled={busy}>
-        {busy ? "Creating…" : "Create bot (paper mode)"}
+        {busy ? "Creating…" : broker?.is_demo === false ? "Create bot on real account" : "Create bot"}
       </Button>
     </form>
   );
@@ -300,9 +330,9 @@ function BotCard({ bot, brokers }: { bot: Bot; brokers: PublicBroker[] }) {
 
   const signal = async (action: "buy" | "sell" | "close") => {
     if (
-      bot.book === "live" &&
+      broker && !broker.is_demo &&
       !(await confirm({
-        title: `Send a live ${action.toUpperCase()} order?`,
+        title: `Send a real-money ${action.toUpperCase()} order?`,
         description: `${bot.symbol} on ${broker?.label ?? "your broker"}. This uses real money and passes through Risk Guard first.`,
         confirmLabel: `${action === "close" ? "Close" : action === "buy" ? "Buy" : "Sell"} now`,
         danger: true,
@@ -328,21 +358,6 @@ function BotCard({ bot, brokers }: { bot: Bot; brokers: PublicBroker[] }) {
     }
   };
 
-  const switchBook = async () => {
-    if (bot.book === "paper") {
-      if (!broker) return toast("Choose a broker account for this bot first (Broker selector below).", "error");
-      const ok = await confirm({
-        title: "Switch to live trading?",
-        description: `"${bot.name}" will trade real money on ${broker.label}. It stays paused until you press Start.`,
-        confirmLabel: "Go live",
-        danger: true,
-      });
-      if (!ok) return;
-      return patch({ book: "live", status: "paused" }, "Bot switched to live — press Start when ready");
-    }
-    return patch({ book: "paper", status: "paused" }, "Bot moved back to paper");
-  };
-
   const remove = async () => {
     const ok = await confirm({
       title: `Delete "${bot.name}"?`,
@@ -359,7 +374,7 @@ function BotCard({ bot, brokers }: { bot: Bot; brokers: PublicBroker[] }) {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="truncate text-base font-semibold">{bot.name}</h3>
-            {bot.book === "live" ? <Badge variant="gold">LIVE</Badge> : <Badge variant="muted">PAPER</Badge>}
+            <AccountKindBadge broker={broker} />
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
             {bot.source === "tradingview" ? "TradingView alerts" : strategy?.name ?? "Built-in"} · {bot.symbol} · {timeframeLabel(bot.timeframe)} ·{" "}
@@ -400,9 +415,6 @@ function BotCard({ bot, brokers }: { bot: Bot; brokers: PublicBroker[] }) {
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-1">
-        <Button size="sm" variant="ghost" disabled={busy} onClick={switchBook}>
-          {bot.book === "paper" ? "Go live →" : "Back to paper"}
-        </Button>
         {bot.source === "tradingview" && (
           <Button size="sm" variant="ghost" onClick={() => setShowWebhook((v) => !v)}>
             {showWebhook ? "Hide setup" : "TradingView setup"}
@@ -427,17 +439,18 @@ function BotCard({ bot, brokers }: { bot: Bot; brokers: PublicBroker[] }) {
           />
         </label>
         <label className="flex items-center gap-2">
-          Broker
+          Account
           <select
             value={bot.broker_account_id ?? ""}
-            onChange={(e) => patch({ broker_account_id: e.target.value || null }, "Broker updated")}
-            disabled={bot.book === "live"}
-            className="h-8 max-w-[11rem] rounded-lg border border-white/10 bg-white/[0.03] px-2 text-base text-foreground sm:text-xs [&>option]:bg-ink"
+            onChange={(e) => patch({ broker_account_id: e.target.value }, "Account updated")}
+            disabled={busy || open.length > 0}
+            title={open.length ? "Close this bot's positions before changing account" : undefined}
+            className="h-8 max-w-[16rem] rounded-lg border border-white/10 bg-white/[0.03] px-2 text-base text-foreground sm:text-xs [&>option]:bg-ink"
           >
-            <option value="">None</option>
+            {!bot.broker_account_id && <option value="">Choose account…</option>}
             {brokers.map((b) => (
               <option key={b.id} value={b.id}>
-                {b.label}
+                {b.label} · {b.is_demo ? "Demo" : "Real"}
               </option>
             ))}
           </select>

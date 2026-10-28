@@ -54,7 +54,7 @@ function BrokerRow({ broker }: { broker: PublicBroker }) {
       method === "DELETE" &&
       !(await confirm({
         title: `Disconnect ${broker.label}?`,
-        description: "Bots using this account move back to paper trading and pause.",
+        description: "Bots using this account pause until you choose another account for them.",
         confirmLabel: "Disconnect",
         danger: true,
       }))

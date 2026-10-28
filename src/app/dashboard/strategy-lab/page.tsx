@@ -167,7 +167,7 @@ export default function StrategyLabPage() {
                   </div>
                   {!Number.isFinite(e.oos_score) && <p className="mt-2 text-[11px] text-amber-300">Too few trades to trust this result.</p>}
                   <Button size="sm" variant={i === 0 ? "default" : "outline"} className="mt-3 w-full" asChild>
-                    <Link href={deployHref(e.strategy_id, e.params, dataSymbol, timeframe)}>Deploy as paper bot</Link>
+                    <Link href={deployHref(e.strategy_id, e.params, dataSymbol, timeframe)}>Create bot from this</Link>
                   </Button>
                 </li>
               );
@@ -226,7 +226,7 @@ export default function StrategyLabPage() {
                       </td>
                       <td className="px-2 py-2.5 text-right">
                         <Button size="sm" variant={i === 0 ? "default" : "outline"} asChild>
-                          <Link href={deployHref(e.strategy_id, e.params, dataSymbol, timeframe)}>Deploy (paper)</Link>
+                          <Link href={deployHref(e.strategy_id, e.params, dataSymbol, timeframe)}>Create bot</Link>
                         </Button>
                       </td>
                     </tr>
@@ -243,8 +243,8 @@ export default function StrategyLabPage() {
           )}
           <p className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/[0.06] p-3 text-xs leading-relaxed text-amber-200">
             Read this before deploying: the “unseen-data” column is the honest number — training returns are always flattering. Even
-            unseen-data results can fade live (spreads, slippage, changing markets). No strategy can promise 100% ROI. Paper trade for 2–4
-            weeks, and only go live with small risk if live results look like these.
+            unseen-data results can fade live (spreads, slippage, changing markets). No strategy can promise 100% ROI. Run it on a demo account for 2–4
+            weeks, and only move it to a real account with small risk if its demo results look like these.
           </p>
         </Panel>
       )}
@@ -293,7 +293,7 @@ export default function StrategyLabPage() {
           </Button>
           {single && (
             <Button variant="ghost" asChild>
-              <Link href={deployHref(strategyId, params, dataSymbol, timeframe)}>Deploy as paper bot →</Link>
+              <Link href={deployHref(strategyId, params, dataSymbol, timeframe)}>Create a bot from this →</Link>
             </Button>
           )}
         </div>

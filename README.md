@@ -5,12 +5,15 @@ One dashboard to run, watch and risk-manage trading bots on **Exness
 
 - **Bots**: built-in strategy bots that trade on their own, or TradingView
   bots that execute your Pine Script alerts. Start, pause, edit, buy/sell/close
-  manually, and switch each bot between **Paper** and **Live**.
+  manually. Each bot trades on one connected broker account.
 - **Brokers**: Exness (and any MT5 broker) through a small bridge EA you run
   in MetaTrader 5; Deriv through its official API (Multiplier contracts).
 - **Strategy Lab**: backtests on real Deriv price history, plus an optimiser
   that tunes every strategy on 70% of the data and ranks them on the 30% it
-  has never seen. Deploy the winner as a paper bot in one click.
+  has never seen. Turn the winner into a bot in one click.
+- **Real or demo money is decided by the broker account**: connect a demo
+  account at Exness or Deriv to practise with your broker's demo money, or a
+  real account to trade real money. Amogana never simulates trades itself.
 - **Risk Guard**: every order passes risk sizing (risk % per trade), a daily
   loss limit, a max-drawdown kill switch and open-trade caps before it can
   reach a broker. There is also a manual **kill switch** that pauses all bots
@@ -19,7 +22,8 @@ One dashboard to run, watch and risk-manage trading bots on **Exness
 > **About returns.** No strategy can guarantee profit, let alone 100% ROI,
 > and anything that promises it is a red flag. The Strategy Lab exists so you
 > can see how a strategy *would have* behaved, on data it wasn't tuned on,
-> before risking money. Start in Paper mode, then go live small.
+> before risking money. Run it on a demo account first, then move it to a
+> real account with small risk.
 
 ## How it works
 
@@ -27,16 +31,18 @@ One dashboard to run, watch and risk-manage trading bots on **Exness
 TradingView alert ──► /api/webhooks/tradingview ─┐
 Built-in strategy (each new candle) ─────────────┼─► engine: dedupe → Risk Guard → size → route
 Manual button on the dashboard ──────────────────┘                                   │
-                                     ┌──────────────────────┬────────────────────────┤
-                                     ▼                      ▼                        ▼
-                               Paper (simulated,     Deriv API (Multiplier     MT5 command queue ──► AmoganaBridge EA
-                               live Deriv prices)    contracts, SL/TP)          (/api/mt5/sync)       in your terminal
+                                                     ┌───────────────────────────────┤
+                                                     ▼                               ▼
+                                              Deriv API (Multiplier          MT5 command queue ──► AmoganaBridge EA
+                                              contracts, SL/TP)              (/api/mt5/sync)       in your terminal
 ```
 
 - The **engine tick** (`/api/engine/tick`, or `/api/cron/tick` for a
-  scheduler) syncs Deriv accounts, marks paper trades to market (stops and
-  targets included), runs built-in bots on each newly closed candle, and
-  enforces the daily-loss and drawdown limits. The open dashboard calls it
+  scheduler) syncs Deriv accounts, runs built-in bots on each newly closed
+  candle, and enforces the daily-loss and drawdown limits — separately for
+  real and demo accounts, so a demo loss never pauses real-money bots. A
+  drawdown on real accounts fires the kill switch; on demo accounts it pauses
+  the demo bots. The open dashboard calls it
   every minute. For 24/7 trading, point a scheduler at the cron endpoint
   (see below).
 - The **MT5 bridge EA** (`public/downloads/AmoganaBridge.mq5`) calls
@@ -66,15 +72,16 @@ always on.
 1. Add Supabase from the Vercel Marketplace (Storage → Supabase). This sets
    `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and
    `POSTGRES_URL_NON_POOLING`. With `POSTGRES_URL_NON_POOLING` set, the app
-   creates its tables on first start. Otherwise, run
-   `supabase/migrations/0001_amogana_autotrade.sql` in the Supabase SQL editor.
+   creates and updates its tables on start-up. Otherwise, run
+   the files in `supabase/migrations/`, in order, in the Supabase SQL editor.
 2. Set `APP_PASSWORD`, `CREDENTIALS_ENCRYPTION_KEY` and `CRON_SECRET` in Vercel.
 3. Run the bots 24/7 with a free scheduler such as cron-job.org, calling
    `https://<your-app>/api/cron/tick?key=<CRON_SECRET>` every minute.
 
 ## Connecting your accounts
 
-Start with **demo** accounts. Every bot is created paused, in Paper mode.
+Start with **demo** accounts. Every bot is created paused, on the account you
+choose; whether it trades real or demo money depends only on that account.
 
 ### Exness (MetaTrader 5)
 
@@ -115,10 +122,10 @@ You can also trade Deriv through its MT5 accounts using the Exness steps above.
    Duplicate alerts (same `id`) are ignored, and opposite signals reverse the
    position.
 
-## Before going live: checklist
+## Before trading real money: checklist
 
-- [ ] The strategy ran in Paper mode for 2–4 weeks, and the results resemble
-      its Strategy Lab "unseen-data" numbers.
+- [ ] The strategy ran on a demo account for 2–4 weeks, and the results
+      resemble its Strategy Lab "unseen-data" numbers.
 - [ ] Risk per trade is 0.5–1%, and the daily loss limit and max drawdown are
       set in Risk Guard.
 - [ ] You tested the kill switch on a demo account.

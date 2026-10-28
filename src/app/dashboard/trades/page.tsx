@@ -1,7 +1,7 @@
 "use client";
 
 import { useDashboard } from "@/components/app/dashboard-context";
-import { EmptyState, PageHeader, PageSkeleton, Panel, PositionsTable } from "@/components/app/widgets";
+import { EmptyState, PageHeader, PageSkeleton, Panel, PositionsTable, TradeKindBadge } from "@/components/app/widgets";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { money, pnlClass, price } from "@/lib/client";
@@ -18,7 +18,7 @@ export default function TradesPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Trades" description="Every position, fill and signal across paper and live accounts." />
+      <PageHeader title="Trades" description="Every position, fill and signal across your connected accounts." />
       <Tabs defaultValue="open">
         <TabsList className="grid w-full grid-cols-3 sm:inline-flex sm:w-auto">
           <TabsTrigger value="open">Open ({state.open_trades.length})</TabsTrigger>
@@ -45,7 +45,7 @@ export default function TradesPage() {
                           <span className={cn("text-xs font-bold", t.side === "buy" ? "text-profit" : "text-loss")}>
                             {t.side.toUpperCase()}
                           </span>
-                          {t.book === "live" ? <Badge variant="gold">LIVE</Badge> : <Badge variant="muted">PAPER</Badge>}
+                          <TradeKindBadge trade={t} />
                         </div>
                         <div className="mt-0.5 truncate text-xs text-muted-foreground">
                           {(t.bot_id && bots.get(t.bot_id)) || (t.external ? "Other EA / manual" : "—")} · {when(t.closed_at)}
@@ -86,15 +86,7 @@ export default function TradesPage() {
                           <td className="px-2 py-2 text-muted-foreground">{when(t.closed_at)}</td>
                           <td className="px-2 py-2 font-semibold">
                             {t.symbol}{" "}
-                            {t.book === "live" ? (
-                              <Badge variant="gold" className="ml-1">
-                                LIVE
-                              </Badge>
-                            ) : (
-                              <Badge variant="muted" className="ml-1">
-                                PAPER
-                              </Badge>
-                            )}
+                            <TradeKindBadge trade={t} className="ml-1" />
                           </td>
                           <td className={cn("px-2 py-2", t.side === "buy" ? "text-profit" : "text-loss")}>
                             {t.side.toUpperCase()}

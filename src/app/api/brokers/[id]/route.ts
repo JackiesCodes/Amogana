@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { jsonError } from "@/lib/http";
-import { activeTrades, adjustLiveBaseline, syncDerivAccount } from "@/lib/trading/engine";
+import { activeTrades, adjustBaseline, bookOf, syncDerivAccount } from "@/lib/trading/engine";
 import { publicBroker } from "@/lib/trading/state";
 import { getStore, log } from "@/lib/trading/store";
 
@@ -27,14 +27,13 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
   for (const bot of bots) {
     await store.bots.update(bot.id, {
       broker_account_id: null,
-      book: "paper",
       status: "paused",
-      paused_reason: "Broker disconnected",
+      paused_reason: "Broker disconnected — choose another account",
     });
   }
   for (const trade of await activeTrades({ broker_account_id: broker.id })) await store.trades.remove(trade.id);
   await store.brokers.remove(broker.id);
-  await adjustLiveBaseline(-broker.equity);
-  await log("warn", `${broker.label} disconnected${bots.length ? `; ${bots.length} bot(s) moved to paper` : ""}`);
+  await adjustBaseline(bookOf(broker), -broker.equity);
+  await log("warn", `${broker.label} disconnected${bots.length ? `; ${bots.length} bot(s) paused until you choose another account` : ""}`);
   return NextResponse.json({ ok: true });
 }

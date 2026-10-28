@@ -10,7 +10,7 @@ interface DashboardContextValue {
   state: DashboardState | null;
   error: string | null;
   refresh: () => Promise<void>;
-  /** Which book the overview shows. */
+  /** Which accounts the overview shows: real-money or demo. */
   view: Book;
   setView: (book: Book) => void;
   lastTick: string | null;
@@ -24,7 +24,7 @@ const TICK_MS = 60_000;
 export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<DashboardState | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [view, setViewState] = useState<Book>("paper");
+  const [view, setViewState] = useState<Book>("real");
   const [lastTick, setLastTick] = useState<string | null>(null);
   const viewChosen = useRef(false);
 
@@ -33,8 +33,11 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       const next = await api<DashboardState>("/api/state");
       setState(next);
       setError(null);
-      // Default to the live view once anything is trading live.
-      if (!viewChosen.current && next.bots.some((b) => b.book === "live")) setViewState("live");
+      // Until you pick, show real accounts — or demo when demo accounts are all you have.
+      if (!viewChosen.current) {
+        const hasReal = next.brokers.some((b) => !b.is_demo);
+        setViewState(hasReal || !next.brokers.length ? "real" : "demo");
+      }
     } catch (e) {
       setError((e as Error).message);
     }

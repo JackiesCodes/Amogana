@@ -1,4 +1,4 @@
-// Deriv market-data symbols used for candles, backtests and paper pricing.
+// Deriv market-data symbols used for candles, signals and backtests.
 export const DATA_SYMBOLS = [
   { value: "frxEURUSD", label: "EUR/USD", group: "Forex" },
   { value: "frxGBPUSD", label: "GBP/USD", group: "Forex" },

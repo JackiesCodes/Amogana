@@ -2,7 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 
-import { adjustLiveBaseline } from "@/lib/trading/engine";
+import { adjustBaseline, bookOf } from "@/lib/trading/engine";
 import { getStore, log, newId, nowIso } from "@/lib/trading/store";
 import type { BrokerAccount, Mt5Command, Trade } from "@/lib/trading/types";
 
@@ -83,8 +83,8 @@ export async function ingestMt5Report(account: BrokerAccount, report: Mt5Report)
     error: null,
     last_sync_at: nowIso(),
   });
-  // First check-in: the account's equity joins the live book without counting as profit.
-  if (!account.last_sync_at) await adjustLiveBaseline(report.equity - account.equity);
+  // First check-in: the account's equity joins its book without counting as profit.
+  if (!account.last_sync_at) await adjustBaseline(bookOf(report), report.equity - account.equity);
 
   // 1. Results of commands sent last time.
   for (const r of report.results) {
@@ -159,7 +159,7 @@ export async function ingestMt5Report(account: BrokerAccount, report: Mt5Report)
       id: newId(),
       bot_id: bot?.id ?? null,
       broker_account_id: account.id,
-      book: "live",
+      book: bookOf(report),
       symbol: p.symbol,
       data_symbol: null,
       side: p.type,

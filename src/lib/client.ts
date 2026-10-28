@@ -2,11 +2,11 @@
 
 const MESSAGES: Record<string, string> = {
   UNAUTHENTICATED: "Your session expired — please log in again.",
-  LIVE_BOT_NEEDS_BROKER: "Live bots need a connected broker account.",
   UNKNOWN_BROKER: "That broker account no longer exists.",
   UNKNOWN_STRATEGY: "Pick a strategy for this bot.",
   KILL_SWITCH_ON: "Release the kill switch before starting bots.",
-  CLOSE_TRADES_BEFORE_SWITCHING_MODE: "Close this bot's open trades before switching between paper and live.",
+  CLOSE_TRADES_BEFORE_SWITCHING_ACCOUNT: "Close this bot's open positions before moving it to another account.",
+  BOT_NEEDS_BROKER: "Choose a broker account for this bot first.",
   CLOSE_TRADES_FIRST: "Close the open trades on this account first.",
   DERIV_TOKEN_REJECTED: "Deriv rejected that API token.",
   DERIV_TOKEN_NEEDS_TRADE_SCOPE: "The Deriv token needs the “Trade” scope.",

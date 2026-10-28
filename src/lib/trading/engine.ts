@@ -35,11 +35,6 @@ export async function latestPrice(dataSymbol: string): Promise<number | null> {
   }
 }
 
-function unrealised(trade: Trade, price: number): number {
-  if (trade.entry_price === null) return 0;
-  return (price - trade.entry_price) * (trade.side === "buy" ? 1 : -1) * trade.size;
-}
-
 // ---------------------------------------------------------------------------
 // Equity and book state
 
@@ -47,39 +42,40 @@ export async function activeTrades(filter: Partial<Trade> = {}): Promise<Trade[]
   return getStore().trades.all({ eq: filter, in: { field: "status", values: ACTIVE } });
 }
 
+/** Real or demo money is decided by the broker account, never by a setting in Amogana. */
+export function bookOf(broker: Pick<BrokerAccount, "is_demo">): Book {
+  return broker.is_demo ? "demo" : "real";
+}
+
 export async function bookEquity(book: Book): Promise<number> {
+  // Last known equity of every account, connected or not: a terminal going
+  // offline must not look like a 100% drawdown and fire the kill switch.
+  const brokers = await getStore().brokers.all();
+  return brokers.filter((b) => bookOf(b) === book).reduce((sum, b) => sum + b.equity, 0);
+}
+
+/** Bots trading on accounts of the given kind. */
+async function botsInBook(book: Book, filter: Partial<Bot> = {}): Promise<Bot[]> {
   const store = getStore();
-  if (book === "live") {
-    // Last known equity of every account, connected or not: a terminal going
-    // offline must not look like a 100% drawdown and fire the kill switch.
-    const brokers = await store.brokers.all();
-    return brokers.reduce((sum, b) => sum + b.equity, 0);
-  }
-  const settings = await getSettings();
-  const closed = await store.trades.all({ eq: { book: "paper", status: "closed" } });
-  const open = await activeTrades({ book: "paper" });
-  return (
-    settings.paper_starting_balance +
-    closed.reduce((s, t) => s + t.pnl, 0) +
-    open.reduce((s, t) => s + t.pnl, 0)
-  );
+  const ids = new Set((await store.brokers.all()).filter((b) => bookOf(b) === book).map((b) => b.id));
+  return (await store.bots.all({ eq: filter })).filter((b) => b.broker_account_id && ids.has(b.broker_account_id));
 }
 
 /**
- * Shift the live book's day-start and peak when an account joins or leaves,
- * so adding a broker isn't counted as profit and removing one as a loss.
+ * Shift a book's day-start and peak when an account joins or leaves, so
+ * adding a broker isn't counted as profit and removing one as a loss.
  */
-export async function adjustLiveBaseline(delta: number): Promise<void> {
+export async function adjustBaseline(book: Book, delta: number): Promise<void> {
   if (!delta) return;
   const settings = await getSettings();
-  const live = settings.books.live;
+  const state = settings.books[book];
   await updateSettings({
     books: {
       ...settings.books,
-      live: {
-        ...live,
-        peak_equity: Math.max(0, live.peak_equity + delta),
-        day_start_equity: Math.max(0, live.day_start_equity + delta),
+      [book]: {
+        ...state,
+        peak_equity: Math.max(0, state.peak_equity + delta),
+        day_start_equity: Math.max(0, state.day_start_equity + delta),
       },
     },
   });
@@ -109,29 +105,32 @@ interface OpenRequest {
   rr?: number | null;
 }
 
-async function brokerFor(bot: Bot): Promise<BrokerAccount | null> {
-  return bot.broker_account_id ? getStore().brokers.get(bot.broker_account_id) : null;
-}
-
 export async function openTrade(
   bot: Bot,
   req: OpenRequest,
 ): Promise<{ ok: true; trade: Trade } | { ok: false; reason: string }> {
   const store = getStore();
+  const broker = bot.broker_account_id ? await store.brokers.get(bot.broker_account_id) : null;
+  if (!broker) return { ok: false, reason: "Bot has no broker account — choose one on the Bots page" };
+  if (broker.status !== "connected") return { ok: false, reason: `${broker.label} is not connected` };
+
+  const book = bookOf(broker);
   const settings = await getSettings();
-  const { equity, state } = await refreshBook(bot.book);
+  const { state } = await refreshBook(book);
   const decision = checkRisk({
     settings,
-    book: bot.book,
+    book,
     bot,
-    equity,
+    // Size from this account's own equity; limits use the whole book.
+    equity: broker.equity,
     bookState: state,
-    openTradesInBook: (await activeTrades({ book: bot.book })).length,
+    bookEquity: await bookEquity(book),
+    openTradesInBook: (await activeTrades({ book })).length,
     openTradesForBot: (await activeTrades({ bot_id: bot.id })).length,
   });
 
   if (!decision.ok) {
-    if (decision.breach) await handleBreach(bot.book, decision.breach, decision.reason);
+    if (decision.breach) await handleBreach(book, decision.breach, decision.reason);
     return { ok: false, reason: decision.reason };
   }
 
@@ -146,13 +145,13 @@ export async function openTrade(
   const base: Trade = {
     id: newId(),
     bot_id: bot.id,
-    broker_account_id: bot.book === "live" ? bot.broker_account_id : null,
-    book: bot.book,
+    broker_account_id: broker.id,
+    book,
     symbol: bot.symbol,
     data_symbol: bot.data_symbol,
     side: req.side,
     size: 0,
-    size_unit: "units",
+    size_unit: broker.kind === "deriv" ? "stake" : "lots",
     entry_price: price ?? null,
     current_price: price ?? null,
     sl,
@@ -169,27 +168,13 @@ export async function openTrade(
     closed_at: null,
   };
 
-  if (bot.book === "paper") {
-    if (!price) return { ok: false, reason: `No price available for ${bot.data_symbol}` };
-    // Without a stop, size as if the stop were 1% away.
-    const dist = stopDistance || price * 0.01;
-    const trade = { ...base, status: "open" as const, size: decision.riskAmount / dist };
-    await store.trades.insert(trade);
-    await log("trade", `PAPER ${req.side.toUpperCase()} ${bot.symbol} @ ${price}`, { bot_id: bot.id });
-    return { ok: true, trade };
-  }
-
-  const broker = await brokerFor(bot);
-  if (!broker) return { ok: false, reason: "Bot has no broker account connected" };
-  if (broker.status !== "connected") return { ok: false, reason: `${broker.label} is not connected` };
-
   if (broker.kind === "deriv") {
     const { stake, stopLossAmount } = derivStake({
       riskAmount: decision.riskAmount,
       entry: price ?? 0,
       stopDistance,
       multiplier: bot.deriv_multiplier,
-      equity,
+      equity: broker.equity,
     });
     const takeProfitAmount =
       price && tp !== null ? (stake * bot.deriv_multiplier * Math.abs(tp - price)) / price : undefined;
@@ -258,25 +243,8 @@ export async function closeTrade(trade: Trade, reason: string): Promise<Trade> {
   const store = getStore();
   if (!ACTIVE.includes(trade.status)) return trade;
 
-  if (trade.book === "paper" || !trade.broker_account_id) {
-    const price = (trade.data_symbol && (await latestPrice(trade.data_symbol))) || trade.current_price || trade.entry_price;
-    const pnl = price ? unrealised(trade, price) : trade.pnl;
-    const closed = await store.trades.update(trade.id, {
-      status: "closed",
-      exit_price: price,
-      current_price: price,
-      pnl,
-      close_reason: reason,
-      closed_at: nowIso(),
-    });
-    await log("trade", `PAPER close ${trade.symbol} ${pnl >= 0 ? "+" : ""}${pnl.toFixed(2)} (${reason})`, {
-      bot_id: trade.bot_id,
-    });
-    return closed!;
-  }
-
-  const broker = await store.brokers.get(trade.broker_account_id);
-  if (!broker) throw new Error("Broker account no longer exists");
+  const broker = trade.broker_account_id ? await store.brokers.get(trade.broker_account_id) : null;
+  if (!broker) throw new Error("This trade's broker account is no longer connected — close it in your broker's app");
 
   if (broker.kind === "deriv") {
     const res = await deps.derivClose(decryptSecret(broker.encrypted_token!), trade.broker_ref!);
@@ -352,14 +320,15 @@ export async function setKillSwitch(on: boolean, reason = "Kill switch pressed")
 
 async function handleBreach(book: Book, breach: "daily_loss" | "drawdown", reason: string) {
   const store = getStore();
-  if (breach === "drawdown") {
+  // A drawdown on real money stops everything; demo accounts never touch real trading.
+  if (breach === "drawdown" && book === "real") {
     await setKillSwitch(true, reason);
     return;
   }
-  const running = await store.bots.all({ eq: { status: "running", book } });
+  const running = await botsInBook(book, { status: "running" });
   if (!running.length) return;
   for (const bot of running) await store.bots.update(bot.id, { status: "paused", paused_reason: reason });
-  await log("warn", `${reason} — paused ${running.length} ${book} bot(s) until you restart them`);
+  await log("warn", `${reason} — paused ${running.length} ${book}-account bot(s) until you restart them`);
 }
 
 // ---------------------------------------------------------------------------
@@ -433,7 +402,7 @@ export async function processSignal(input: SignalInput): Promise<Signal> {
 }
 
 // ---------------------------------------------------------------------------
-// Periodic engine tick: sync brokers, mark paper trades, run built-in bots
+// Periodic engine tick: sync brokers, run built-in bots, enforce limits
 
 function closedCandles(candles: Candle[], timeframe: number): Candle[] {
   const now = Date.now() / 1000;
@@ -472,7 +441,7 @@ export async function syncDerivAccount(broker: BrokerAccount): Promise<void> {
           id: newId(),
           bot_id: null,
           broker_account_id: broker.id,
-          book: "live",
+          book: bookOf(broker),
           symbol: c.symbol,
           data_symbol: c.symbol,
           side: c.side,
@@ -497,41 +466,6 @@ export async function syncDerivAccount(broker: BrokerAccount): Promise<void> {
     }
   } catch (error) {
     await store.brokers.update(broker.id, { status: "error", error: (error as Error).message, last_sync_at: nowIso() });
-  }
-}
-
-async function markPaperTrades() {
-  const store = getStore();
-  for (const trade of await activeTrades({ book: "paper" })) {
-    if (!trade.data_symbol) continue;
-    let candles: Candle[];
-    try {
-      candles = await deps.candles(trade.data_symbol, 60, 2);
-    } catch {
-      continue;
-    }
-    const bar = candles.at(-1);
-    if (!bar) continue;
-    const long = trade.side === "buy";
-    const stopHit = trade.sl !== null && (long ? bar.low <= trade.sl : bar.high >= trade.sl);
-    const targetHit = trade.tp !== null && (long ? bar.high >= trade.tp : bar.low <= trade.tp);
-    if (stopHit || targetHit) {
-      const exit = stopHit ? trade.sl! : trade.tp!;
-      const pnl = unrealised(trade, exit);
-      await store.trades.update(trade.id, {
-        status: "closed",
-        exit_price: exit,
-        current_price: exit,
-        pnl,
-        close_reason: stopHit ? "Stop loss" : "Take profit",
-        closed_at: nowIso(),
-      });
-      await log("trade", `PAPER ${stopHit ? "stop" : "target"} ${trade.symbol} ${pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}`, {
-        bot_id: trade.bot_id,
-      });
-    } else {
-      await store.trades.update(trade.id, { current_price: bar.close, pnl: unrealised(trade, bar.close) });
-    }
   }
 }
 
@@ -564,7 +498,6 @@ export async function runBuiltinBot(bot: Bot): Promise<string> {
       bot,
       source: "builtin",
       action: want === 1 ? "buy" : "sell",
-      price: bot.book === "paper" ? last.close : null,
       stopDistance: atr * (params.atr_mult ?? 2),
       rr: params.rr ?? 0,
     });
@@ -586,7 +519,7 @@ export function runEngineTick(): Promise<TickReport> {
   return tickInFlight;
 }
 
-let lastEquityPoint: Record<Book, number> = { paper: 0, live: 0 };
+let lastEquityPoint: Record<Book, number> = { real: 0, demo: 0 };
 
 async function doTick(): Promise<TickReport> {
   const store = getStore();
@@ -598,8 +531,6 @@ async function doTick(): Promise<TickReport> {
       await store.brokers.update(broker.id, { status: "waiting", error: "MT5 bridge has not checked in for 2 minutes" });
     }
   }
-
-  await markPaperTrades();
 
   const settings = await getSettings();
   if (!settings.kill_switch) {
@@ -613,16 +544,16 @@ async function doTick(): Promise<TickReport> {
     }
   }
 
-  for (const book of ["paper", "live"] as const) {
+  for (const book of ["real", "demo"] as const) {
     const { equity, state } = await refreshBook(book);
     if (equity <= 0) continue;
     const s = await getSettings();
     if (s.max_drawdown_percent > 0 && state.peak_equity > 0 && !s.kill_switch) {
       const dd = ((state.peak_equity - equity) / state.peak_equity) * 100;
-      if (dd >= s.max_drawdown_percent) await handleBreach(book, "drawdown", `${book} drawdown ${dd.toFixed(1)}% hit the ${s.max_drawdown_percent}% limit`);
+      if (dd >= s.max_drawdown_percent) await handleBreach(book, "drawdown", `${book === "real" ? "Real" : "Demo"}-account drawdown ${dd.toFixed(1)}% hit the ${s.max_drawdown_percent}% limit`);
     }
     if (s.daily_loss_limit > 0 && state.day_start_equity - equity >= s.daily_loss_limit) {
-      await handleBreach(book, "daily_loss", `${book} daily loss limit of ${s.daily_loss_limit} reached`);
+      await handleBreach(book, "daily_loss", `${book === "real" ? "Real" : "Demo"}-account daily loss limit of ${s.daily_loss_limit} reached`);
     }
     if (Date.now() - lastEquityPoint[book] > 5 * 60_000) {
       lastEquityPoint = { ...lastEquityPoint, [book]: Date.now() };

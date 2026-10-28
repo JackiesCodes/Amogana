@@ -12,8 +12,7 @@ export const dynamic = "force-dynamic";
 const patchSchema = z.object({
   status: z.enum(["running", "paused"]).optional(),
   name: z.string().trim().min(1).max(60).optional(),
-  book: z.enum(["paper", "live"]).optional(),
-  broker_account_id: z.string().nullable().optional(),
+  broker_account_id: z.string().min(1).optional(),
   risk_percent: z.coerce.number().min(0.1).max(5).optional(),
   deriv_multiplier: z.coerce.number().int().min(1).max(5000).optional(),
   timeframe: z.coerce.number().int().positive().optional(),
@@ -34,15 +33,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     patch.strategy = { ...bot.strategy, params: { ...bot.strategy.params, ...strategy_params } };
   }
 
-  const nextBook = patch.book ?? bot.book;
-  const nextBroker = patch.broker_account_id !== undefined ? patch.broker_account_id : bot.broker_account_id;
-  if (nextBook === "live" && !nextBroker) return jsonError(400, "LIVE_BOT_NEEDS_BROKER");
-  if (patch.book && patch.book !== bot.book && (await activeTrades({ bot_id: bot.id })).length) {
-    return jsonError(409, "CLOSE_TRADES_BEFORE_SWITCHING_MODE");
+  if (patch.broker_account_id !== undefined && patch.broker_account_id !== bot.broker_account_id) {
+    if (!patch.broker_account_id || !(await store.brokers.get(patch.broker_account_id))) return jsonError(400, "UNKNOWN_BROKER");
+    if ((await activeTrades({ bot_id: bot.id })).length) return jsonError(409, "CLOSE_TRADES_BEFORE_SWITCHING_ACCOUNT");
   }
 
   if (patch.status === "running") {
     if ((await getSettings()).kill_switch) return jsonError(409, "KILL_SWITCH_ON");
+    if (!(patch.broker_account_id ?? bot.broker_account_id)) return jsonError(400, "BOT_NEEDS_BROKER");
     patch.paused_reason = null;
   } else if (patch.status === "paused") {
     patch.paused_reason = "Paused by you";

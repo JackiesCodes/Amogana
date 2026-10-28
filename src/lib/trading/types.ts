@@ -1,7 +1,8 @@
 // Field names are snake_case so rows map 1:1 onto the Supabase tables in
 // supabase/migrations/0001_amogana_autotrade.sql.
 
-export type Book = "paper" | "live";
+/** Whether money is real or demo — always taken from the broker account (see bookOf). */
+export type Book = "real" | "demo";
 export type Side = "buy" | "sell";
 export type BrokerKind = "deriv" | "mt5";
 
@@ -37,11 +38,11 @@ export interface Bot {
   id: string;
   name: string;
   source: BotSource;
+  /** Required to trade; null only after its account was disconnected. */
   broker_account_id: string | null;
-  book: Book;
   /** Symbol as the broker names it, e.g. "EURUSDm" on Exness or "frxEURUSD" / "R_75" on Deriv. */
   symbol: string;
-  /** Deriv symbol used for candles / paper pricing, e.g. "frxEURUSD". */
+  /** Deriv symbol the strategy reads candles from, e.g. "frxEURUSD". */
   data_symbol: string;
   timeframe: number; // seconds per candle
   strategy: StrategyConfig | null;
@@ -69,9 +70,9 @@ export interface Trade {
   symbol: string;
   data_symbol: string | null;
   side: Side;
-  /** Lots on MT5, stake on Deriv, units in paper mode. */
+  /** Lots on MT5, stake on Deriv. */
   size: number;
-  size_unit: "lots" | "stake" | "units";
+  size_unit: "lots" | "stake";
   entry_price: number | null;
   current_price: number | null;
   sl: number | null;
@@ -152,7 +153,6 @@ export interface Settings {
   max_open_trades: number;
   max_trades_per_bot: number;
   default_risk_percent: number;
-  paper_starting_balance: number;
   books: Record<Book, BookState>;
   updated_at: string;
 }

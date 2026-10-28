@@ -5,7 +5,7 @@ import { dirname } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import postgres from "postgres";
 
-import { SCHEMA_SQL } from "@/lib/trading/schema";
+import { MIGRATIONS } from "@/lib/trading/schema";
 
 import type {
   Bot,
@@ -174,12 +174,23 @@ function ensureSchema(): Promise<void> {
   globalForSchema.__amoganaSchema ??= (async () => {
     const sql = postgres(url, { ssl: "require", max: 1, prepare: false, onnotice: () => {} });
     try {
-      const [row] = await sql`select to_regclass('public.equity') is not null as ready`;
-      if (!row?.ready) {
-        await sql.unsafe(SCHEMA_SQL);
-        // Make the Supabase REST API see the new tables immediately.
+      const [row] = await sql`
+        select
+          to_regclass('public.equity') is not null as has_tables,
+          exists (
+            select 1 from information_schema.columns
+            where table_schema = 'public' and table_name = 'bots' and column_name = 'book'
+          ) as has_paper_mode`;
+      // 0001 creates the tables; 0002 removes paper mode. Both are idempotent.
+      const pending = !row?.has_tables ? MIGRATIONS : row.has_paper_mode ? MIGRATIONS.slice(1) : [];
+      for (const migration of pending) {
+        await sql.unsafe(migration.sql);
+        console.info(`[amogana] applied ${migration.file}`);
+      }
+      if (pending.length) {
+        // Make the Supabase REST API see the changes immediately, then give it a moment.
         await sql`notify pgrst, 'reload schema'`;
-        console.info("[amogana] database tables created");
+        await new Promise((resolve) => setTimeout(resolve, 1500));
       }
     } finally {
       await sql.end({ timeout: 5 });
@@ -302,17 +313,23 @@ export const DEFAULT_SETTINGS: Settings = {
   max_open_trades: 8,
   max_trades_per_bot: 1,
   default_risk_percent: 1,
-  paper_starting_balance: 10000,
   books: {
-    paper: { peak_equity: 10000, day_key: "", day_start_equity: 10000 },
-    live: { peak_equity: 0, day_key: "", day_start_equity: 0 },
+    real: { peak_equity: 0, day_key: "", day_start_equity: 0 },
+    demo: { peak_equity: 0, day_key: "", day_start_equity: 0 },
   },
   updated_at: new Date(0).toISOString(),
 };
 
 export async function getSettings(store = getStore()): Promise<Settings> {
   const existing = await store.settings.get("global");
-  if (existing) return { ...DEFAULT_SETTINGS, ...existing, books: { ...DEFAULT_SETTINGS.books, ...existing.books } };
+  if (existing) {
+    const books = existing.books ?? DEFAULT_SETTINGS.books;
+    return {
+      ...DEFAULT_SETTINGS,
+      ...existing,
+      books: { real: books.real ?? DEFAULT_SETTINGS.books.real, demo: books.demo ?? DEFAULT_SETTINGS.books.demo },
+    };
+  }
   const fresh = { ...DEFAULT_SETTINGS, updated_at: nowIso() };
   await store.settings.insert(fresh);
   return fresh;

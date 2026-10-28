@@ -12,7 +12,6 @@ const schema = z.object({
   max_open_trades: z.coerce.number().int().min(1).max(100).optional(),
   max_trades_per_bot: z.coerce.number().int().min(1).max(10).optional(),
   default_risk_percent: z.coerce.number().min(0.1).max(5).optional(),
-  paper_starting_balance: z.coerce.number().min(100).optional(),
 });
 
 export async function GET() {

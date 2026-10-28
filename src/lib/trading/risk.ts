@@ -4,7 +4,10 @@ export interface RiskInput {
   settings: Settings;
   book: Book;
   bot: Bot;
+  /** Equity of the account the order goes to — sizes the trade. */
   equity: number;
+  /** Combined equity of every account of this kind — checked against the limits. */
+  bookEquity: number;
   bookState: BookState;
   openTradesInBook: number;
   openTradesForBot: number;
@@ -16,18 +19,18 @@ export type RiskDecision =
 
 /** Pure pre-trade check: every order passes through here before it can reach a broker. */
 export function checkRisk(input: RiskInput): RiskDecision {
-  const { settings, bot, equity, bookState } = input;
+  const { settings, bot, equity, bookEquity, bookState } = input;
 
   if (settings.kill_switch) return { ok: false, reason: "Kill switch is on" };
   if (bot.status !== "running") return { ok: false, reason: "Bot is paused" };
   if (equity <= 0) return { ok: false, reason: "No equity available on this account" };
 
-  const dayLoss = bookState.day_start_equity - equity;
+  const dayLoss = bookState.day_start_equity - bookEquity;
   if (settings.daily_loss_limit > 0 && dayLoss >= settings.daily_loss_limit) {
     return { ok: false, reason: `Daily loss limit reached (${dayLoss.toFixed(2)})`, breach: "daily_loss" };
   }
 
-  const drawdown = bookState.peak_equity > 0 ? ((bookState.peak_equity - equity) / bookState.peak_equity) * 100 : 0;
+  const drawdown = bookState.peak_equity > 0 ? ((bookState.peak_equity - bookEquity) / bookState.peak_equity) * 100 : 0;
   if (settings.max_drawdown_percent > 0 && drawdown >= settings.max_drawdown_percent) {
     return { ok: false, reason: `Max drawdown reached (${drawdown.toFixed(1)}%)`, breach: "drawdown" };
   }

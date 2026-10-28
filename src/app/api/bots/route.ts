@@ -13,8 +13,7 @@ export const dynamic = "force-dynamic";
 const botInputSchema = z.object({
   name: z.string().trim().min(1).max(60),
   source: z.enum(["builtin", "tradingview"]),
-  book: z.enum(["paper", "live"]).default("paper"),
-  broker_account_id: z.string().nullable().default(null),
+  broker_account_id: z.string().min(1),
   symbol: z.string().trim().min(1).max(30),
   data_symbol: z.string().trim().max(30).optional(),
   timeframe: z.coerce.number().int().positive().default(3600),
@@ -34,10 +33,8 @@ export async function POST(request: Request) {
   const input = parsed.data;
   const store = getStore();
 
-  if (input.book === "live") {
-    if (!input.broker_account_id) return jsonError(400, "LIVE_BOT_NEEDS_BROKER");
-    if (!(await store.brokers.get(input.broker_account_id))) return jsonError(400, "UNKNOWN_BROKER");
-  }
+  const broker = await store.brokers.get(input.broker_account_id);
+  if (!broker) return jsonError(400, "UNKNOWN_BROKER");
 
   let strategy: Bot["strategy"] = null;
   if (input.source === "builtin") {
@@ -51,8 +48,7 @@ export async function POST(request: Request) {
     id: newId(),
     name: input.name,
     source: input.source,
-    broker_account_id: input.broker_account_id,
-    book: input.book,
+    broker_account_id: broker.id,
     symbol: input.symbol,
     data_symbol: input.data_symbol || guessDataSymbol(input.symbol),
     timeframe: input.timeframe,
@@ -68,7 +64,7 @@ export async function POST(request: Request) {
     created_at: nowIso(),
   };
   await store.bots.insert(bot);
-  await log("info", `Bot "${bot.name}" created (${bot.book})`, { bot_id: bot.id });
+  await log("info", `Bot "${bot.name}" created on ${broker.label}${broker.is_demo ? " (demo)" : ""}`, { bot_id: bot.id });
   return NextResponse.json(bot, { status: 201 });
 }
 

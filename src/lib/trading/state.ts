@@ -71,9 +71,9 @@ export async function getDashboardState(): Promise<DashboardState> {
   ]);
 
   const closedOnly = closed.filter((t) => t.status === "closed");
-  const [paper, live] = await Promise.all([
-    kpisFor("paper", settings, closedOnly, open),
-    kpisFor("live", settings, closedOnly, open),
+  const [real, demo] = await Promise.all([
+    kpisFor("real", settings, closedOnly, open),
+    kpisFor("demo", settings, closedOnly, open),
   ]);
 
   return {
@@ -85,10 +85,10 @@ export async function getDashboardState(): Promise<DashboardState> {
     signals,
     logs,
     equity: {
-      paper: equity.filter((e) => e.book === "paper"),
-      live: equity.filter((e) => e.book === "live"),
+      real: equity.filter((e) => e.book === "real"),
+      demo: equity.filter((e) => e.book === "demo"),
     },
-    kpis: { paper, live },
+    kpis: { real, demo },
     meta: { backend: store.backend, auth: Boolean(process.env.APP_PASSWORD), generated_at: new Date().toISOString() },
   };
 }

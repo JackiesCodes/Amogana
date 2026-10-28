@@ -10,12 +10,19 @@ import { Input } from "@/components/ui/input";
 import { api, money } from "@/lib/client";
 
 const FIELDS = [
-  { key: "daily_loss_limit", label: "Daily loss limit ($)", hint: "When today's loss reaches this, every bot in that mode (paper or live) pauses until you restart it." },
-  { key: "max_drawdown_percent", label: "Max drawdown (%)", hint: "Drop from the equity peak that triggers the kill switch: all bots pause and all positions close." },
-  { key: "max_open_trades", label: "Max open trades", hint: "Across all bots in one mode." },
+  {
+    key: "daily_loss_limit",
+    label: "Daily loss limit ($)",
+    hint: "Checked separately for real and demo accounts. When today's loss reaches this, bots on those accounts pause until you restart them.",
+  },
+  {
+    key: "max_drawdown_percent",
+    label: "Max drawdown (%)",
+    hint: "Drop from the equity peak. On real accounts it fires the kill switch (all bots pause, all positions close); on demo accounts it pauses the demo bots.",
+  },
+  { key: "max_open_trades", label: "Max open trades", hint: "Across all bots on real accounts, and separately on demo accounts." },
   { key: "max_trades_per_bot", label: "Max trades per bot", hint: "1 = a bot holds at most one position at a time." },
   { key: "default_risk_percent", label: "Default risk per trade (%)", hint: "Used when a bot doesn't set its own. Hard-capped at 5%." },
-  { key: "paper_starting_balance", label: "Paper starting balance ($)", hint: "Virtual money for paper trading." },
 ] as const;
 
 type Key = (typeof FIELDS)[number]["key"];
@@ -57,23 +64,45 @@ export default function RiskPage() {
       />
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {(["live", "paper"] as const).map((book) => {
-          const k = state.kpis[book];
-          const loss = Math.max(0, -k.today_pnl);
-          return (
-            <Panel key={book} title={book === "live" ? "Live accounts" : "Paper account"}>
-              <div className="space-y-4">
-                <div className="text-sm text-muted-foreground">
-                  Equity <span className="font-mono text-foreground">{money(k.equity)}</span> · peak{" "}
-                  <span className="font-mono text-foreground">{money(state.settings.books[book].peak_equity)}</span>
+        {(["real", "demo"] as const)
+          .filter((book) => state.brokers.some((b) => (b.is_demo ? "demo" : "real") === book))
+          .map((book) => {
+            const k = state.kpis[book];
+            const loss = Math.max(0, -k.today_pnl);
+            return (
+              <Panel key={book} title={book === "real" ? "Real accounts" : "Demo accounts"}>
+                <div className="space-y-4">
+                  <div className="text-sm text-muted-foreground">
+                    Equity <span className="font-mono text-foreground">{money(k.equity)}</span> · peak{" "}
+                    <span className="font-mono text-foreground">{money(state.settings.books[book].peak_equity)}</span>
+                  </div>
+                  <Meter
+                    label="Daily loss"
+                    value={loss}
+                    max={state.settings.daily_loss_limit}
+                    display={`${money(loss)} / ${money(state.settings.daily_loss_limit)}`}
+                  />
+                  <Meter
+                    label="Drawdown"
+                    value={k.drawdown_percent}
+                    max={state.settings.max_drawdown_percent}
+                    display={`${k.drawdown_percent.toFixed(1)}% / ${state.settings.max_drawdown_percent}%`}
+                  />
+                  <Meter
+                    label="Open trades"
+                    value={k.open_positions}
+                    max={state.settings.max_open_trades}
+                    display={`${k.open_positions} / ${state.settings.max_open_trades}`}
+                  />
                 </div>
-                <Meter label="Daily loss" value={loss} max={state.settings.daily_loss_limit} display={`${money(loss)} / ${money(state.settings.daily_loss_limit)}`} />
-                <Meter label="Drawdown" value={k.drawdown_percent} max={state.settings.max_drawdown_percent} display={`${k.drawdown_percent.toFixed(1)}% / ${state.settings.max_drawdown_percent}%`} />
-                <Meter label="Open trades" value={k.open_positions} max={state.settings.max_open_trades} display={`${k.open_positions} / ${state.settings.max_open_trades}`} />
-              </div>
-            </Panel>
-          );
-        })}
+              </Panel>
+            );
+          })}
+        {!state.brokers.length && (
+          <Panel className="lg:col-span-2">
+            <p className="text-sm text-muted-foreground">Connect a broker account to see its risk usage here.</p>
+          </Panel>
+        )}
       </div>
 
       <Panel title="Limits">
@@ -81,7 +110,12 @@ export default function RiskPage() {
           <div className="grid gap-5 md:grid-cols-2">
             {FIELDS.map((f) => (
               <Field key={f.key} label={f.label} hint={f.hint}>
-                <Input type="number" step="any" value={form[f.key]} onChange={(e) => setForm({ ...form, [f.key]: Number(e.target.value) })} />
+                <Input
+                  type="number"
+                  step="any"
+                  value={form[f.key]}
+                  onChange={(e) => setForm({ ...form, [f.key]: Number(e.target.value) })}
+                />
               </Field>
             ))}
           </div>

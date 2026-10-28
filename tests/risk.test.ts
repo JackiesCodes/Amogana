@@ -7,9 +7,10 @@ import type { Bot } from "@/lib/trading/types";
 const bot = { status: "running", risk_percent: 1 } as Bot;
 const base = {
   settings: DEFAULT_SETTINGS,
-  book: "paper" as const,
+  book: "real" as const,
   bot,
   equity: 10_000,
+  bookEquity: 10_000,
   bookState: { peak_equity: 10_000, day_key: "2026-01-01", day_start_equity: 10_000 },
   openTradesInBook: 0,
   openTradesForBot: 0,
@@ -20,15 +21,20 @@ describe("checkRisk", () => {
     expect(checkRisk(base)).toEqual({ ok: true, riskAmount: 100 });
   });
 
+  it("sizes from the account but checks limits on the whole book", () => {
+    expect(checkRisk({ ...base, equity: 2_000 })).toEqual({ ok: true, riskAmount: 20 });
+    expect(checkRisk({ ...base, equity: 2_000, bookEquity: 9_700 })).toMatchObject({ ok: false, breach: "daily_loss" });
+  });
+
   it("caps per-trade risk at 5%", () => {
     expect(checkRisk({ ...base, bot: { ...bot, risk_percent: 20 } })).toEqual({ ok: true, riskAmount: 500 });
   });
 
   it("blocks on kill switch, daily loss, drawdown and trade limits", () => {
     expect(checkRisk({ ...base, settings: { ...DEFAULT_SETTINGS, kill_switch: true } }).ok).toBe(false);
-    expect(checkRisk({ ...base, equity: 9_700 })).toMatchObject({ ok: false, breach: "daily_loss" });
+    expect(checkRisk({ ...base, bookEquity: 9_700 })).toMatchObject({ ok: false, breach: "daily_loss" });
     expect(
-      checkRisk({ ...base, equity: 8_400, bookState: { ...base.bookState, day_start_equity: 8_400 } }),
+      checkRisk({ ...base, bookEquity: 8_400, bookState: { ...base.bookState, day_start_equity: 8_400 } }),
     ).toMatchObject({ ok: false, breach: "drawdown" });
     expect(checkRisk({ ...base, openTradesInBook: 8 }).ok).toBe(false);
     expect(checkRisk({ ...base, openTradesForBot: 1 }).ok).toBe(false);

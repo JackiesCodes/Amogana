@@ -4,7 +4,7 @@ import { z } from "zod";
 import { derivAuthorize } from "@/lib/brokers/deriv";
 import { jsonError, zodError } from "@/lib/http";
 import { encryptSecret, randomToken, sha256 } from "@/lib/secrets";
-import { adjustLiveBaseline } from "@/lib/trading/engine";
+import { adjustBaseline, bookOf } from "@/lib/trading/engine";
 import { publicBroker } from "@/lib/trading/state";
 import { getStore, log, newId, nowIso } from "@/lib/trading/store";
 import type { BrokerAccount } from "@/lib/trading/types";
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       last_sync_at: nowIso(),
     };
     await store.brokers.insert(account);
-    await adjustLiveBaseline(account.equity);
+    await adjustBaseline(bookOf(account), account.equity);
     await log("info", `Deriv account ${info.loginid}${info.is_virtual ? " (demo)" : ""} connected`);
     return NextResponse.json({ broker: publicBroker(account) }, { status: 201 });
   }
