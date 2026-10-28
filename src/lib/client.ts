@@ -70,5 +70,5 @@ export function timeAgo(iso: string | null | undefined): string {
 
 export function pnlClass(value: number | null | undefined): string {
   if (!value) return "text-muted-foreground";
-  return value > 0 ? "text-cyber-mint" : "text-neon-crimson";
+  return value > 0 ? "text-profit" : "text-loss";
 }

@@ -79,7 +79,7 @@ function BrokerRow({ broker }: { broker: PublicBroker }) {
         <div className="flex items-center gap-2">
           <span className="font-semibold">{broker.label}</span>
           <Badge variant="muted">{broker.kind === "mt5" ? "MetaTrader 5" : "Deriv API"}</Badge>
-          {broker.login && <Badge variant={broker.is_demo ? "default" : "crimson"}>{broker.is_demo ? "DEMO" : "REAL"}</Badge>}
+          {broker.login && <Badge variant={broker.is_demo ? "default" : "gold"}>{broker.is_demo ? "DEMO" : "REAL"}</Badge>}
         </div>
         <div className="mt-1 text-xs text-muted-foreground">
           {broker.login ? `Login ${broker.login}${broker.server ? ` · ${broker.server}` : ""} · ` : ""}
@@ -94,7 +94,7 @@ function BrokerRow({ broker }: { broker: PublicBroker }) {
             <RefreshCw />
           </Button>
         )}
-        <Button size="icon" variant="ghost" className="text-neon-crimson" onClick={() => act("DELETE")} disabled={busy} aria-label="Disconnect">
+        <Button size="icon" variant="ghost" className="text-loss" onClick={() => act("DELETE")} disabled={busy} aria-label="Disconnect">
           <Trash2 />
         </Button>
       </div>
@@ -142,7 +142,7 @@ function ExnessConnect({ onCreated }: { onCreated: (b: { key: string; label: str
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          The terminal must stay running for bots to trade — a Windows VPS (Exness offers a free one on qualifying accounts) keeps it online 24/7.
+          The MT5 terminal must stay running for bots to trade. A Windows VPS keeps it online 24/7.
         </p>
       </div>
     </Panel>
@@ -152,7 +152,7 @@ function ExnessConnect({ onCreated }: { onCreated: (b: { key: string; label: str
 function BridgeInstructions({ bridgeKey, label, onDone }: { bridgeKey: string; label: string; onDone: () => void }) {
   const url = typeof window === "undefined" ? "" : window.location.origin;
   return (
-    <Panel title={`Finish connecting ${label}`} className="border-glow-mint">
+    <Panel title={`Finish connecting ${label}`} className="border-seal">
       <p className="mb-3 text-sm text-amber-300">Copy the bridge key now — it is shown only once.</p>
       <div className="space-y-3">
         <CopyRow label="Server URL" value={url} />
@@ -221,7 +221,7 @@ function DerivConnect() {
           {busy ? "Checking…" : "Connect"}
         </Button>
       </div>
-      {error && <p className="mt-2 text-sm text-neon-crimson">{error}</p>}
+      {error && <p className="mt-2 text-sm text-loss">{error}</p>}
     </Panel>
   );
 }

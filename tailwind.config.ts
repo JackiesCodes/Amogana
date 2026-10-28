@@ -55,10 +55,14 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        obsidian: "#0A0B10",
-        "cyber-mint": "#00FFA3",
-        "neon-crimson": "#FF2E93",
-        "liquid-platinum": "#E2E8F0",
+        // Banknote palette: ink-black green paper, "dollar bill" green,
+        // foil-seal gold, note-paper cream, and a muted brick red for losses.
+        ink: "#0B120F",
+        panel: "#111A16",
+        profit: "#85BB65",
+        loss: "#D9634F",
+        gold: "#C8A24A",
+        ivory: "#EDE8D8",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -66,18 +70,13 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        "glow-mint": "0 0 20px rgba(0, 255, 163, 0.35), 0 0 60px rgba(0, 255, 163, 0.08)",
-        "glow-crimson": "0 0 20px rgba(255, 46, 147, 0.35), 0 0 60px rgba(255, 46, 147, 0.08)",
+        lift: "inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 14px rgba(0, 0, 0, 0.35)",
         glass: "0 8px 32px rgba(0, 0, 0, 0.45)",
       },
       backgroundImage: {
-        "grid-glow":
-          "linear-gradient(rgba(0,255,163,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,163,0.06) 1px, transparent 1px)",
-        "radial-fade":
-          "radial-gradient(circle at 50% 0%, rgba(0,255,163,0.12), transparent 60%)",
-      },
-      backgroundSize: {
-        grid: "36px 36px",
+        // Fine engraved-line texture, like the guilloché on a banknote.
+        engraving:
+          "repeating-linear-gradient(135deg, rgba(200,162,74,0.05) 0 1px, transparent 1px 7px), repeating-linear-gradient(45deg, rgba(133,187,101,0.04) 0 1px, transparent 1px 7px)",
       },
       keyframes: {
         "accordion-down": {

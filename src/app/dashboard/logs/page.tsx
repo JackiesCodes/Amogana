@@ -8,9 +8,9 @@ import { cn } from "@/lib/utils";
 
 const LEVELS = ["all", "trade", "warn", "error", "info"] as const;
 const TONE: Record<string, string> = {
-  trade: "text-cyber-mint",
+  trade: "text-profit",
   warn: "text-amber-300",
-  error: "text-neon-crimson",
+  error: "text-loss",
   info: "text-muted-foreground",
 };
 

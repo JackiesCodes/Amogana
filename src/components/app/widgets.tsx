@@ -27,7 +27,7 @@ export function Panel({
     <section className={cn("glass-panel min-w-0 p-4 sm:p-5", className)}>
       {(title || action) && (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-          {title && <h2 className="text-sm font-semibold tracking-wide text-liquid-platinum">{title}</h2>}
+          {title && <h2 className="text-sm font-semibold tracking-wide text-ivory">{title}</h2>}
           {action}
         </div>
       )}
@@ -40,7 +40,7 @@ export function PageHeader({ title, description, action }: { title: string; desc
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
-        <h1 className="text-xl font-bold tracking-tight text-liquid-platinum sm:text-2xl">{title}</h1>
+        <h1 className="text-xl font-bold tracking-tight text-ivory sm:text-2xl">{title}</h1>
         {description && <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{description}</p>}
       </div>
       {action}
@@ -108,7 +108,7 @@ export function Segmented<T extends string>({
           onClick={() => onChange(o.value)}
           className={cn(
             "flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 capitalize transition-colors sm:px-4",
-            value === o.value ? o.activeClass ?? "bg-cyber-mint text-obsidian" : "text-muted-foreground hover:text-foreground",
+            value === o.value ? o.activeClass ?? "bg-profit text-ink" : "text-muted-foreground hover:text-foreground",
           )}
         >
           {o.label}
@@ -120,7 +120,7 @@ export function Segmented<T extends string>({
 
 export function Meter({ label, value, max, display }: { label: string; value: number; max: number; display: string }) {
   const ratio = max > 0 ? Math.min(Math.max(value / max, 0), 1) : 0;
-  const color = ratio >= 0.9 ? "bg-neon-crimson" : ratio >= 0.6 ? "bg-amber-400" : "bg-cyber-mint";
+  const color = ratio >= 0.9 ? "bg-loss" : ratio >= 0.6 ? "bg-amber-400" : "bg-profit";
   return (
     <div>
       <div className="flex justify-between gap-3 text-sm">
@@ -173,7 +173,7 @@ export function AreaChart({
   const sy = (y: number) => height - ((y - minY) / (maxY - minY)) * height;
   const line = points.map((p, i) => `${i ? "L" : "M"}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(" ");
   const up = points[points.length - 1]!.y >= points[0]!.y;
-  const stroke = up ? "#00FFA3" : "#FF2E93";
+  const stroke = up ? "#85BB65" : "#D9634F";
   const id = up ? "area-up" : "area-down";
 
   return (
@@ -199,22 +199,22 @@ export function AreaChart({
 export function BotStatusBadge({ bot }: { bot: Bot }) {
   if (bot.status === "running") {
     return (
-      <Badge variant="mint">
+      <Badge variant="profit">
         <span className="h-1.5 w-1.5 rounded-full bg-current" /> Running
       </Badge>
     );
   }
   return (
-    <Badge variant="amber" title={bot.paused_reason ?? undefined}>
+    <Badge variant="warning" title={bot.paused_reason ?? undefined}>
       <span className="h-1.5 w-1.5 rounded-full bg-current" /> Paused
     </Badge>
   );
 }
 
 export function BrokerStatusBadge({ broker }: { broker: PublicBroker }) {
-  if (broker.status === "connected") return <Badge variant="mint">● Connected</Badge>;
-  if (broker.status === "waiting") return <Badge variant="amber">● Waiting for bridge</Badge>;
-  return <Badge variant="crimson">● Error</Badge>;
+  if (broker.status === "connected") return <Badge variant="profit">● Connected</Badge>;
+  if (broker.status === "waiting") return <Badge variant="warning">● Waiting for bridge</Badge>;
+  return <Badge variant="loss">● Error</Badge>;
 }
 
 export function PositionsTable({ trades, showBook = false }: { trades: Trade[]; showBook?: boolean }) {
@@ -274,12 +274,12 @@ export function PositionsTable({ trades, showBook = false }: { trades: Trade[]; 
                   <span
                     className={cn(
                       "rounded-md px-1.5 py-0.5 text-[10px] font-bold",
-                      t.side === "buy" ? "bg-cyber-mint/15 text-cyber-mint" : "bg-neon-crimson/15 text-neon-crimson",
+                      t.side === "buy" ? "bg-profit/15 text-profit" : "bg-loss/15 text-loss",
                     )}
                   >
                     {t.side.toUpperCase()}
                   </span>
-                  {showBook && t.book === "live" && <Badge variant="crimson">LIVE</Badge>}
+                  {showBook && t.book === "live" && <Badge variant="gold">LIVE</Badge>}
                 </div>
                 <div className="mt-0.5 truncate text-xs text-muted-foreground">
                   {botLabel(t)} · {account(t)}
@@ -341,7 +341,7 @@ export function PositionsTable({ trades, showBook = false }: { trades: Trade[]; 
             return (
               <tr key={t.id} className="border-t border-white/5">
                 <td className="px-2 py-2.5 font-semibold">{t.symbol}</td>
-                <td className={cn("px-2 py-2.5 font-medium", t.side === "buy" ? "text-cyber-mint" : "text-neon-crimson")}>
+                <td className={cn("px-2 py-2.5 font-medium", t.side === "buy" ? "text-profit" : "text-loss")}>
                   {t.side.toUpperCase()}
                 </td>
                 <td className="px-2 py-2.5 font-mono tabular-nums">{size(t)}</td>
@@ -352,7 +352,7 @@ export function PositionsTable({ trades, showBook = false }: { trades: Trade[]; 
                 <td className="px-2 py-2.5">{bot?.name ?? (t.external ? <span className="text-muted-foreground">Other EA / manual{t.magic ? ` #${t.magic}` : ""}</span> : "—")}</td>
                 <td className="px-2 py-2.5 text-muted-foreground">
                   {t.book === "paper" ? "Paper" : broker?.label ?? "—"}
-                  {showBook && t.book === "live" && <Badge variant="crimson" className="ml-2">LIVE</Badge>}
+                  {showBook && t.book === "live" && <Badge variant="gold" className="ml-2">LIVE</Badge>}
                 </td>
                 <td className={cn("px-2 py-2.5 text-right font-mono", pnlClass(t.pnl))}>{money(t.pnl, broker?.currency, true)}</td>
                 <td className="px-2 py-2.5 text-right">
@@ -381,7 +381,7 @@ export function Field({ label, hint, children }: { label: string; hint?: React.R
 }
 
 export const selectClass =
-  "h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 text-base text-foreground sm:text-sm focus:border-cyber-mint/50 focus:outline-none [&>option]:bg-obsidian [&>optgroup]:bg-obsidian";
+  "h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 text-base text-foreground sm:text-sm focus:border-profit/50 focus:outline-none [&>option]:bg-ink [&>optgroup]:bg-ink";
 
 export function LastSeen({ iso }: { iso: string | null }) {
   return <span className="text-xs text-muted-foreground">{timeAgo(iso)}</span>;

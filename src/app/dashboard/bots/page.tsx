@@ -149,7 +149,7 @@ function BotForm({ brokers, onDone }: { brokers: PublicBroker[]; onDone: () => v
             type="button"
             key={value}
             onClick={() => setSource(value)}
-            className={cn("rounded-lg py-2", source === value ? "bg-cyber-mint text-obsidian" : "text-muted-foreground")}
+            className={cn("rounded-lg py-2", source === value ? "bg-profit text-ink" : "text-muted-foreground")}
           >
             {label}
           </button>
@@ -260,7 +260,7 @@ function BotForm({ brokers, onDone }: { brokers: PublicBroker[]; onDone: () => v
         )}
       </div>
 
-      {error && <p className="text-sm text-neon-crimson">{error}</p>}
+      {error && <p className="text-sm text-loss">{error}</p>}
       <Button type="submit" className="w-full" disabled={busy}>
         {busy ? "Creating…" : "Create bot (paper mode)"}
       </Button>
@@ -359,7 +359,7 @@ function BotCard({ bot, brokers }: { bot: Bot; brokers: PublicBroker[] }) {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="truncate text-base font-semibold">{bot.name}</h3>
-            {bot.book === "live" ? <Badge variant="crimson">LIVE</Badge> : <Badge variant="muted">PAPER</Badge>}
+            {bot.book === "live" ? <Badge variant="gold">LIVE</Badge> : <Badge variant="muted">PAPER</Badge>}
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
             {bot.source === "tradingview" ? "TradingView alerts" : strategy?.name ?? "Built-in"} · {bot.symbol} · {timeframeLabel(bot.timeframe)} ·{" "}
@@ -388,10 +388,10 @@ function BotCard({ bot, brokers }: { bot: Bot; brokers: PublicBroker[] }) {
             <Play /> Start
           </Button>
         )}
-        <Button size="sm" variant="outline" disabled={busy} onClick={() => signal("buy")} className="text-cyber-mint">
+        <Button size="sm" variant="outline" disabled={busy} onClick={() => signal("buy")} className="text-profit">
           Buy
         </Button>
-        <Button size="sm" variant="outline" disabled={busy} onClick={() => signal("sell")} className="text-neon-crimson">
+        <Button size="sm" variant="outline" disabled={busy} onClick={() => signal("sell")} className="text-loss">
           Sell
         </Button>
         <Button size="sm" variant="outline" disabled={busy || !open.length} onClick={() => signal("close")} className="col-span-2 sm:col-span-1">
@@ -408,7 +408,7 @@ function BotCard({ bot, brokers }: { bot: Bot; brokers: PublicBroker[] }) {
             {showWebhook ? "Hide setup" : "TradingView setup"}
           </Button>
         )}
-        <Button size="sm" variant="ghost" className="ml-auto text-neon-crimson" disabled={busy} onClick={remove} aria-label="Delete bot">
+        <Button size="sm" variant="ghost" className="ml-auto text-loss" disabled={busy} onClick={remove} aria-label="Delete bot">
           <Trash2 />
         </Button>
       </div>
@@ -432,7 +432,7 @@ function BotCard({ bot, brokers }: { bot: Bot; brokers: PublicBroker[] }) {
             value={bot.broker_account_id ?? ""}
             onChange={(e) => patch({ broker_account_id: e.target.value || null }, "Broker updated")}
             disabled={bot.book === "live"}
-            className="h-8 max-w-[11rem] rounded-lg border border-white/10 bg-white/[0.03] px-2 text-base text-foreground sm:text-xs [&>option]:bg-obsidian"
+            className="h-8 max-w-[11rem] rounded-lg border border-white/10 bg-white/[0.03] px-2 text-base text-foreground sm:text-xs [&>option]:bg-ink"
           >
             <option value="">None</option>
             {brokers.map((b) => (
@@ -474,7 +474,7 @@ function WebhookSetup({ bot }: { bot: Bot }) {
   ).replace('"{{close}}"', "{{close}}");
 
   return (
-    <div className="mt-4 space-y-3 rounded-xl border border-cyber-mint/20 bg-cyber-mint/[0.04] p-3 text-sm">
+    <div className="mt-4 space-y-3 rounded-xl border border-profit/20 bg-profit/[0.04] p-3 text-sm">
       <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
         <li>In TradingView, open your strategy → <b className="text-foreground">Create alert</b>.</li>
         <li>

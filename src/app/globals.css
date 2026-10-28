@@ -4,33 +4,34 @@
 
 @layer base {
   :root {
-    --background: 232 27% 4%;
-    --foreground: 214 32% 91%;
+    /* Banknote palette — see tailwind.config.ts colours. */
+    --background: 150 24% 6%; /* ink #0B120F */
+    --foreground: 44 37% 89%; /* note-paper cream #EDE8D8 */
 
-    --card: 230 24% 7%;
-    --card-foreground: 214 32% 91%;
+    --card: 154 21% 8%; /* #111A16 */
+    --card-foreground: 44 37% 89%;
 
-    --popover: 230 24% 7%;
-    --popover-foreground: 214 32% 91%;
+    --popover: 154 21% 8%;
+    --popover-foreground: 44 37% 89%;
 
-    --primary: 156 100% 50%;
-    --primary-foreground: 232 27% 4%;
+    --primary: 97 39% 56%; /* dollar-bill green #85BB65 */
+    --primary-foreground: 150 24% 6%;
 
-    --secondary: 328 100% 59%;
-    --secondary-foreground: 214 32% 96%;
+    --secondary: 43 54% 54%; /* foil gold #C8A24A */
+    --secondary-foreground: 150 24% 6%;
 
-    --muted: 230 20% 14%;
-    --muted-foreground: 220 14% 62%;
+    --muted: 150 12% 14%;
+    --muted-foreground: 142 7% 63%;
 
-    --accent: 230 20% 14%;
-    --accent-foreground: 214 32% 91%;
+    --accent: 150 12% 14%;
+    --accent-foreground: 44 37% 89%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 214 32% 96%;
+    --destructive: 9 64% 58%; /* brick red #D9634F */
+    --destructive-foreground: 44 37% 96%;
 
-    --border: 220 20% 100%;
-    --input: 230 20% 16%;
-    --ring: 156 100% 50%;
+    --border: 44 37% 100%;
+    --input: 150 12% 16%;
+    --ring: 97 39% 56%;
 
     --radius: 0.9rem;
 
@@ -50,8 +51,8 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    background-image: radial-gradient(circle at 15% -10%, rgba(0, 255, 163, 0.08), transparent 45%),
-      radial-gradient(circle at 85% 0%, rgba(255, 46, 147, 0.06), transparent 40%);
+    background-image: radial-gradient(circle at 15% -10%, rgba(133, 187, 101, 0.07), transparent 45%),
+      radial-gradient(circle at 85% 0%, rgba(200, 162, 74, 0.05), transparent 40%);
     background-attachment: fixed;
   }
 }
@@ -65,18 +66,10 @@
     @apply glass shadow-glass rounded-2xl;
   }
 
-  .text-glow-mint {
-    text-shadow: 0 0 18px rgba(0, 255, 163, 0.55);
-  }
-
-  .text-glow-crimson {
-    text-shadow: 0 0 18px rgba(255, 46, 147, 0.55);
-  }
-
-  .border-glow-mint {
+  .border-seal {
     box-shadow:
-      0 0 0 1px rgba(0, 255, 163, 0.25) inset,
-      0 0 24px rgba(0, 255, 163, 0.18);
+      0 0 0 1px rgba(200, 162, 74, 0.35) inset,
+      0 8px 28px rgba(0, 0, 0, 0.35);
   }
 
   .scrollbar-thin::-webkit-scrollbar {
@@ -85,7 +78,7 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: rgba(0, 255, 163, 0.25);
+    background: rgba(133, 187, 101, 0.25);
     border-radius: 999px;
   }
 

@@ -76,9 +76,9 @@ function EngineStatus({ compact = false }: { compact?: boolean }) {
   const ok = !error && Boolean(lastTick);
   if (compact) {
     return (
-      <span className={cn("flex items-center gap-1.5 text-xs", ok ? "text-cyber-mint" : "text-amber-300")}>
-        <span className={cn("h-2 w-2 rounded-full", ok ? "animate-pulse bg-cyber-mint" : "bg-amber-300")} />
-        {ok ? "Live" : "Connecting"}
+      <span className={cn("flex items-center gap-1.5 text-xs", ok ? "text-profit" : "text-amber-300")}>
+        <span className={cn("h-2 w-2 rounded-full", ok ? "animate-pulse bg-profit" : "bg-amber-300")} />
+        {ok ? "Engine on" : "Connecting"}
       </span>
     );
   }
@@ -86,7 +86,7 @@ function EngineStatus({ compact = false }: { compact?: boolean }) {
   return (
     <div className="glass rounded-xl p-3 text-xs">
       <div className="uppercase tracking-widest text-muted-foreground">Engine</div>
-      <div className={cn("mt-2 flex items-center gap-2", ok ? "text-cyber-mint" : "text-amber-300")}>
+      <div className={cn("mt-2 flex items-center gap-2", ok ? "text-profit" : "text-amber-300")}>
         <Activity className="h-3.5 w-3.5" />
         {lastTick ? `Ran ${timeAgo(lastTick)}` : "Starting…"}
       </div>
@@ -112,7 +112,7 @@ function Sidebar() {
             className={cn(
               "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
               isActive(pathname, href)
-                ? "bg-cyber-mint/10 font-medium text-cyber-mint"
+                ? "bg-profit/10 font-medium text-profit"
                 : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
             )}
           >
@@ -177,7 +177,7 @@ function TopBar() {
   const running = state?.bots.filter((b) => b.status === "running").length ?? 0;
 
   return (
-    <header className="sticky top-0 z-30 border-b border-white/5 bg-obsidian/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+    <header className="sticky top-0 z-30 border-b border-white/5 bg-ink/85 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
       <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6 lg:h-16 lg:px-8">
         {/* Phones */}
         <div className="flex items-center gap-3 lg:hidden">
@@ -228,7 +228,7 @@ function TopBar() {
         </div>
       </div>
       {kill.on && (
-        <div className="border-t border-neon-crimson/30 bg-neon-crimson/10 px-4 py-2 text-center text-xs font-medium text-neon-crimson sm:text-sm">
+        <div className="border-t border-loss/30 bg-loss/10 px-4 py-2 text-center text-xs font-medium text-loss sm:text-sm">
           Kill switch is ON — no new trades will be placed.
         </div>
       )}
@@ -250,7 +250,7 @@ function TabBar() {
     <>
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-obsidian/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-ink/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
       >
         <div className="grid grid-cols-5">
           {tabs.map(({ href, short, icon: Icon }) => {
@@ -261,10 +261,10 @@ function TabBar() {
                 href={href}
                 className={cn(
                   "flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors",
-                  active ? "text-cyber-mint" : "text-muted-foreground",
+                  active ? "text-profit" : "text-muted-foreground",
                 )}
               >
-                <Icon className={cn("h-5 w-5", active && "drop-shadow-[0_0_8px_rgba(0,255,163,0.6)]")} />
+                <Icon className="h-5 w-5" />
                 {short}
               </Link>
             );
@@ -273,7 +273,7 @@ function TabBar() {
             onClick={() => setMoreOpen(true)}
             className={cn(
               "flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium",
-              moreActive ? "text-cyber-mint" : "text-muted-foreground",
+              moreActive ? "text-profit" : "text-muted-foreground",
             )}
           >
             <MoreHorizontal className="h-5 w-5" />
@@ -288,7 +288,7 @@ function TabBar() {
             <DialogTitle>More</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-2">
-            <Link href="/dashboard/bots?new=1" className="flex items-center gap-2 rounded-xl bg-cyber-mint px-3 py-3 text-sm font-semibold text-obsidian">
+            <Link href="/dashboard/bots?new=1" className="flex items-center gap-2 rounded-xl bg-profit px-3 py-3 text-sm font-semibold text-ink">
               <Plus className="h-4 w-4" /> New bot
             </Link>
             <Link href="/dashboard/brokers" className="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-3 text-sm">
@@ -300,14 +300,14 @@ function TabBar() {
               <Link
                 key={href}
                 href={href}
-                className={cn("flex items-center gap-3 px-4 py-3.5 text-sm", isActive(pathname, href) ? "text-cyber-mint" : "text-foreground")}
+                className={cn("flex items-center gap-3 px-4 py-3.5 text-sm", isActive(pathname, href) ? "text-profit" : "text-foreground")}
               >
                 <Icon className="h-4 w-4 text-muted-foreground" />
                 {label}
               </Link>
             ))}
             {state?.meta.auth && (
-              <button onClick={logout} className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm text-neon-crimson">
+              <button onClick={logout} className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm text-loss">
                 <LogOut className="h-4 w-4" /> Log out
               </button>
             )}

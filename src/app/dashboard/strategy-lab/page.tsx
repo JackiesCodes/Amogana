@@ -113,7 +113,7 @@ export default function StrategyLabPage() {
             <Trophy /> {busy === "optimise" ? "Training on history…" : "Find the best strategy"}
           </Button>
         </div>
-        {error && <p className="mt-3 text-sm text-neon-crimson">{error}</p>}
+        {error && <p className="mt-3 text-sm text-loss">{error}</p>}
       </Panel>
 
       {board && (
@@ -130,7 +130,7 @@ export default function StrategyLabPage() {
                   onClick={() => setSelected(i)}
                   className={cn(
                     "rounded-xl border p-3",
-                    i === selected ? "border-cyber-mint/40 bg-cyber-mint/[0.04]" : "border-white/[0.06] bg-white/[0.02]",
+                    i === selected ? "border-profit/40 bg-profit/[0.04]" : "border-white/[0.06] bg-white/[0.02]",
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -219,7 +219,7 @@ export default function StrategyLabPage() {
                       <td className="px-2 py-2.5 font-mono">
                         {m.trades}{" "}
                         {!trusted && (
-                          <Badge variant="amber" className="ml-1">
+                          <Badge variant="warning" className="ml-1">
                             too few
                           </Badge>
                         )}
@@ -320,7 +320,7 @@ export default function StrategyLabPage() {
                     {[...single.trades].reverse().map((t, i) => (
                       <tr key={i} className="border-t border-white/5">
                         <td className="px-2 py-1.5">{new Date(t.entry_epoch * 1000).toLocaleString()}</td>
-                        <td className={cn("px-2 py-1.5", t.side === "buy" ? "text-cyber-mint" : "text-neon-crimson")}>
+                        <td className={cn("px-2 py-1.5", t.side === "buy" ? "text-profit" : "text-loss")}>
                           {t.side.toUpperCase()}
                         </td>
                         <td className="px-2 py-1.5 font-mono">

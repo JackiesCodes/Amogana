@@ -51,7 +51,7 @@ export default function OverviewPage() {
             className="w-full sm:w-auto"
             options={[
               { value: "paper", label: "Paper" },
-              { value: "live", label: "Live", activeClass: "bg-neon-crimson text-white" },
+              { value: "live", label: "Live", activeClass: "bg-gold text-ink" },
             ]}
           />
         }
@@ -81,7 +81,7 @@ export default function OverviewPage() {
         <Panel title="Equity curve (30 days)">
           <AreaChart points={curve} baseline={view === "paper" ? settings.paper_starting_balance : undefined} />
         </Panel>
-        <Panel title="My bots" action={<Link href="/dashboard/bots" className="text-xs text-muted-foreground hover:text-cyber-mint">Manage →</Link>}>
+        <Panel title="My bots" action={<Link href="/dashboard/bots" className="text-xs text-muted-foreground hover:text-profit">Manage →</Link>}>
           {bots.length ? (
             <ul className="divide-y divide-white/5">
               {bots.slice(0, 6).map((bot) => {
@@ -106,7 +106,7 @@ export default function OverviewPage() {
             </ul>
           ) : (
             <EmptyState>
-              No {view} bots yet. <Link href="/dashboard/bots?new=1" className="text-cyber-mint">Create one →</Link>
+              No {view} bots yet. <Link href="/dashboard/bots?new=1" className="text-profit">Create one →</Link>
             </EmptyState>
           )}
         </Panel>
@@ -116,7 +116,7 @@ export default function OverviewPage() {
         <Panel title="Open positions" className="md:col-span-2 2xl:col-span-1">
           <PositionsTable trades={trades} />
         </Panel>
-        <Panel title="Brokers" action={<Link href="/dashboard/brokers" className="text-xs text-muted-foreground hover:text-cyber-mint">Manage →</Link>}>
+        <Panel title="Brokers" action={<Link href="/dashboard/brokers" className="text-xs text-muted-foreground hover:text-profit">Manage →</Link>}>
           {state.brokers.length ? (
             <ul className="divide-y divide-white/5 text-sm">
               {state.brokers.map((b) => (
@@ -131,11 +131,11 @@ export default function OverviewPage() {
             </ul>
           ) : (
             <EmptyState>
-              <Link href="/dashboard/brokers" className="text-cyber-mint">Connect Exness or Deriv →</Link>
+              <Link href="/dashboard/brokers" className="text-profit">Connect Exness or Deriv →</Link>
             </EmptyState>
           )}
         </Panel>
-        <Panel title="Risk Guard" action={<Link href="/dashboard/risk" className="text-xs text-muted-foreground hover:text-cyber-mint">Edit →</Link>}>
+        <Panel title="Risk Guard" action={<Link href="/dashboard/risk" className="text-xs text-muted-foreground hover:text-profit">Edit →</Link>}>
           <div className="space-y-4">
             <Meter label="Daily loss" value={dayLoss} max={settings.daily_loss_limit} display={`${money(dayLoss)} / ${money(settings.daily_loss_limit)}`} />
             <Meter label="Drawdown" value={k.drawdown_percent} max={settings.max_drawdown_percent} display={`${k.drawdown_percent.toFixed(1)}% / ${settings.max_drawdown_percent}%`} />

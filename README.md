@@ -21,8 +21,6 @@ One dashboard to run, watch and risk-manage trading bots on **Exness
 > can see how a strategy *would have* behaved, on data it wasn't tuned on,
 > before risking money. Start in Paper mode, then go live small.
 
-![Dashboard mockup](mockups/dashboard.png)
-
 ## How it works
 
 ```

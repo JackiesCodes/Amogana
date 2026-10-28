@@ -42,16 +42,16 @@ export default function TradesPage() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold">{t.symbol}</span>
-                          <span className={cn("text-xs font-bold", t.side === "buy" ? "text-cyber-mint" : "text-neon-crimson")}>
+                          <span className={cn("text-xs font-bold", t.side === "buy" ? "text-profit" : "text-loss")}>
                             {t.side.toUpperCase()}
                           </span>
-                          {t.book === "live" ? <Badge variant="crimson">LIVE</Badge> : <Badge variant="muted">PAPER</Badge>}
+                          {t.book === "live" ? <Badge variant="gold">LIVE</Badge> : <Badge variant="muted">PAPER</Badge>}
                         </div>
                         <div className="mt-0.5 truncate text-xs text-muted-foreground">
                           {(t.bot_id && bots.get(t.bot_id)) || (t.external ? "Other EA / manual" : "—")} · {when(t.closed_at)}
                         </div>
                         <div
-                          className={cn("mt-0.5 truncate text-xs", t.status === "rejected" ? "text-neon-crimson" : "text-muted-foreground")}
+                          className={cn("mt-0.5 truncate text-xs", t.status === "rejected" ? "text-loss" : "text-muted-foreground")}
                         >
                           {t.close_reason}
                         </div>
@@ -87,7 +87,7 @@ export default function TradesPage() {
                           <td className="px-2 py-2 font-semibold">
                             {t.symbol}{" "}
                             {t.book === "live" ? (
-                              <Badge variant="crimson" className="ml-1">
+                              <Badge variant="gold" className="ml-1">
                                 LIVE
                               </Badge>
                             ) : (
@@ -96,7 +96,7 @@ export default function TradesPage() {
                               </Badge>
                             )}
                           </td>
-                          <td className={cn("px-2 py-2", t.side === "buy" ? "text-cyber-mint" : "text-neon-crimson")}>
+                          <td className={cn("px-2 py-2", t.side === "buy" ? "text-profit" : "text-loss")}>
                             {t.side.toUpperCase()}
                           </td>
                           <td className="px-2 py-2 font-mono">
@@ -104,7 +104,7 @@ export default function TradesPage() {
                           </td>
                           <td className="px-2 py-2">{(t.bot_id && bots.get(t.bot_id)) || (t.external ? "Other EA / manual" : "—")}</td>
                           <td className="px-2 py-2 text-muted-foreground">
-                            {t.status === "rejected" ? <span className="text-neon-crimson">{t.close_reason}</span> : t.close_reason}
+                            {t.status === "rejected" ? <span className="text-loss">{t.close_reason}</span> : t.close_reason}
                           </td>
                           <td className={cn("px-2 py-2 text-right font-mono", pnlClass(t.pnl))}>
                             {t.status === "rejected" ? "—" : money(t.pnl, "USD", true)}
@@ -137,7 +137,7 @@ export default function TradesPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-muted-foreground">{when(s.received_at)}</span>
-                      <Badge variant={s.status === "accepted" ? "mint" : s.status === "duplicate" ? "muted" : "crimson"}>{s.status}</Badge>
+                      <Badge variant={s.status === "accepted" ? "profit" : s.status === "duplicate" ? "muted" : "loss"}>{s.status}</Badge>
                     </div>
                   </li>
                 ))}

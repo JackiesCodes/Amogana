@@ -8,10 +8,12 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-white/10 bg-white/[0.04] text-liquid-platinum",
-        mint: "border-cyber-mint/30 bg-cyber-mint/10 text-cyber-mint",
-        crimson: "border-neon-crimson/30 bg-neon-crimson/10 text-neon-crimson",
-        amber: "border-amber-400/30 bg-amber-400/10 text-amber-300",
+        default: "border-white/10 bg-white/[0.04] text-ivory",
+        profit: "border-profit/30 bg-profit/10 text-profit",
+        loss: "border-loss/30 bg-loss/10 text-loss",
+        /** Real money: live mode, real accounts. */
+        gold: "border-gold/40 bg-gold/10 text-gold",
+        warning: "border-amber-400/30 bg-amber-400/10 text-amber-300",
         muted: "border-white/5 bg-white/[0.02] text-muted-foreground",
       },
     },

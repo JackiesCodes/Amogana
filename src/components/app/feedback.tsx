@@ -32,9 +32,9 @@ const FeedbackContext = createContext<FeedbackContextValue | null>(null);
 
 const ICONS = { success: CheckCircle2, error: XCircle, info: Info };
 const TONES = {
-  success: "border-cyber-mint/30 text-cyber-mint",
-  error: "border-neon-crimson/40 text-neon-crimson",
-  info: "border-white/15 text-liquid-platinum",
+  success: "border-profit/30 text-profit",
+  error: "border-loss/40 text-loss",
+  info: "border-white/15 text-ivory",
 };
 
 /** In-app toasts and confirm dialogs, replacing the browser's alert()/confirm(). */
@@ -72,7 +72,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
           <DialogHeader>
             <div className="flex items-start gap-3">
               {pending?.danger && (
-                <span className="mt-0.5 rounded-full bg-neon-crimson/15 p-2 text-neon-crimson">
+                <span className="mt-0.5 rounded-full bg-loss/15 p-2 text-loss">
                   <AlertTriangle className="h-4 w-4" />
                 </span>
               )}
@@ -104,12 +104,12 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
               key={t.id}
               role="status"
               className={cn(
-                "pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl border bg-[#0D0F17]/95 px-4 py-3 text-sm shadow-glass backdrop-blur-xl animate-in fade-in-0 slide-in-from-bottom-4",
+                "pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl border bg-[#111A16]/95 px-4 py-3 text-sm shadow-glass backdrop-blur-xl animate-in fade-in-0 slide-in-from-bottom-4",
                 TONES[t.tone],
               )}
             >
               <Icon className="mt-0.5 h-4 w-4 shrink-0" />
-              <span className="text-liquid-platinum">{t.message}</span>
+              <span className="text-ivory">{t.message}</span>
             </div>
           );
         })}

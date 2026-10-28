@@ -17,8 +17,8 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-11 w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-liquid-platinum",
-      "focus:outline-none focus:ring-2 focus:ring-cyber-mint/50 focus:border-cyber-mint/50",
+      "flex h-11 w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-ivory",
+      "focus:outline-none focus:ring-2 focus:ring-profit/50 focus:border-profit/50",
       "disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 transition-colors",
       className,
     )}
@@ -26,7 +26,7 @@ const SelectTrigger = React.forwardRef<
   >
     {children}
     <SelectPrimitive.Icon asChild>
-      <ChevronDown className="h-4 w-4 shrink-0 text-cyber-mint opacity-70" />
+      <ChevronDown className="h-4 w-4 shrink-0 text-profit opacity-70" />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ));
@@ -68,7 +68,7 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-xl border border-white/10 bg-[#0D0F17]/95 backdrop-blur-xl text-liquid-platinum shadow-glass",
+        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-xl border border-white/10 bg-[#111A16]/95 backdrop-blur-xl text-ivory shadow-glass",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         position === "popper" &&
           "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
@@ -113,14 +113,14 @@ const SelectItem = React.forwardRef<
     ref={ref}
     className={cn(
       "relative flex w-full cursor-pointer select-none items-center rounded-lg py-2 pl-8 pr-2 text-sm outline-none",
-      "focus:bg-cyber-mint/10 focus:text-cyber-mint data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "focus:bg-profit/10 focus:text-profit data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className,
     )}
     {...props}
   >
     <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
       <SelectPrimitive.ItemIndicator>
-        <Check className="h-4 w-4 text-cyber-mint" />
+        <Check className="h-4 w-4 text-profit" />
       </SelectPrimitive.ItemIndicator>
     </span>
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>

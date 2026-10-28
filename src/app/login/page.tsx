@@ -39,10 +39,10 @@ function LoginForm() {
 
   return (
     <main className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-5 py-[max(2rem,env(safe-area-inset-top))]">
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-grid-glow bg-grid opacity-40 [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_70%)]" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-engraving [mask-image:radial-gradient(ellipse_at_center,black_10%,transparent_65%)]" />
       <div className="relative w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
-          <BrandMark className="h-14 w-14 drop-shadow-[0_0_24px_rgba(0,255,163,0.35)]" />
+          <BrandMark className="h-14 w-14" />
           <Wordmark className="mt-4 text-2xl" />
           <p className="mt-2 text-sm text-muted-foreground">Auto-trading control room</p>
         </div>
@@ -64,7 +64,7 @@ function LoginForm() {
             </div>
           </label>
           {error && (
-            <p role="alert" className="rounded-lg bg-neon-crimson/10 px-3 py-2 text-sm text-neon-crimson">
+            <p role="alert" className="rounded-lg bg-loss/10 px-3 py-2 text-sm text-loss">
               {error}
             </p>
           )}
@@ -74,7 +74,7 @@ function LoginForm() {
         </form>
 
         <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-          <ShieldCheck className="h-3.5 w-3.5 text-cyber-mint" />
+          <ShieldCheck className="h-3.5 w-3.5 text-profit" />
           Encrypted session · broker keys never leave the server
         </p>
       </div>
