@@ -3,6 +3,9 @@ import "server-only";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import postgres from "postgres";
+
+import { SCHEMA_SQL } from "@/lib/trading/schema";
 
 import type {
   Bot,
@@ -158,13 +161,47 @@ class FileBackend {
 // ---------------------------------------------------------------------------
 // Supabase backend
 
+const globalForSchema = globalThis as unknown as { __amoganaSchema?: Promise<void> };
+
+/**
+ * Creates the tables on first use when a direct Postgres URL is available
+ * (the Vercel ↔ Supabase integration sets POSTGRES_URL_NON_POOLING), so no
+ * manual migration is needed. Idempotent; runs at most once per server process.
+ */
+function ensureSchema(): Promise<void> {
+  const url = process.env.POSTGRES_URL_NON_POOLING ?? process.env.DATABASE_URL;
+  if (!url) return Promise.resolve();
+  globalForSchema.__amoganaSchema ??= (async () => {
+    const sql = postgres(url, { ssl: "require", max: 1, prepare: false, onnotice: () => {} });
+    try {
+      const [row] = await sql`select to_regclass('public.equity') is not null as ready`;
+      if (!row?.ready) {
+        await sql.unsafe(SCHEMA_SQL);
+        // Make the Supabase REST API see the new tables immediately.
+        await sql`notify pgrst, 'reload schema'`;
+        console.info("[amogana] database tables created");
+      }
+    } finally {
+      await sql.end({ timeout: 5 });
+    }
+  })().catch((error) => {
+    globalForSchema.__amoganaSchema = undefined; // retry on the next request
+    console.error("[amogana] could not create database tables", error);
+  });
+  return globalForSchema.__amoganaSchema;
+}
+
 function supabaseCollection<T extends Row>(client: SupabaseClient, table: TableName): Collection<T> {
   const fail = (op: string, error: { message: string }): never => {
     throw new Error(`[store] ${table}.${op}: ${error.message}`);
   };
+  const from = async () => {
+    await ensureSchema();
+    return client.from(table);
+  };
   return {
     all: async (query) => {
-      let q = client.from(table).select("*");
+      let q = (await from()).select("*");
       if (query?.eq) for (const [k, v] of Object.entries(query.eq)) q = q.eq(k, v as string);
       if (query?.in) q = q.in(String(query.in.field), query.in.values as string[]);
       if (query?.since) q = q.gte(String(query.since.field), query.since.value);
@@ -175,22 +212,22 @@ function supabaseCollection<T extends Row>(client: SupabaseClient, table: TableN
       return (data ?? []) as T[];
     },
     get: async (id) => {
-      const { data, error } = await client.from(table).select("*").eq("id", id).maybeSingle();
+      const { data, error } = await (await from()).select("*").eq("id", id).maybeSingle();
       if (error) fail("get", error);
       return (data as T | null) ?? null;
     },
     insert: async (row) => {
-      const { data, error } = await client.from(table).insert(row).select("*").single();
+      const { data, error } = await (await from()).insert(row).select("*").single();
       if (error) fail("insert", error);
       return data as T;
     },
     update: async (id, patch) => {
-      const { data, error } = await client.from(table).update(patch).eq("id", id).select("*").maybeSingle();
+      const { data, error } = await (await from()).update(patch).eq("id", id).select("*").maybeSingle();
       if (error) fail("update", error);
       return (data as T | null) ?? null;
     },
     remove: async (id) => {
-      const { error } = await client.from(table).delete().eq("id", id);
+      const { error } = await (await from()).delete().eq("id", id);
       if (error) fail("remove", error);
     },
   };

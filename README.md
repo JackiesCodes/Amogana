@@ -65,10 +65,12 @@ always on.
 
 ### Hosting on Vercel + Supabase
 
-1. Create a Supabase project and run `supabase/migrations/0001_amogana_autotrade.sql`
-   in its SQL editor.
-2. Set `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
-   `APP_PASSWORD`, `CREDENTIALS_ENCRYPTION_KEY` and `CRON_SECRET` in Vercel.
+1. Add Supabase from the Vercel Marketplace (Storage → Supabase). This sets
+   `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and
+   `POSTGRES_URL_NON_POOLING`. With `POSTGRES_URL_NON_POOLING` set, the app
+   creates its tables on first start. Otherwise, run
+   `supabase/migrations/0001_amogana_autotrade.sql` in the Supabase SQL editor.
+2. Set `APP_PASSWORD`, `CREDENTIALS_ENCRYPTION_KEY` and `CRON_SECRET` in Vercel.
 3. Run the bots 24/7 with a free scheduler such as cron-job.org, calling
    `https://<your-app>/api/cron/tick?key=<CRON_SECRET>` every minute.
 
