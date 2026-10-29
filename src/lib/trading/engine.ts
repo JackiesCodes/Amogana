@@ -1,6 +1,6 @@
 import "server-only";
 
-import { derivCandles, derivClose, derivOpen, derivSnapshot, type Candle } from "@/lib/brokers/deriv";
+import { derivCandles, derivClose, derivOpen, derivSnapshot, type Candle, type DerivCredentials } from "@/lib/brokers/deriv";
 import { decryptSecret } from "@/lib/secrets";
 import { atrSeries, getStrategy } from "@/lib/strategies";
 import { advanceBookState, checkRisk, derivStake } from "@/lib/trading/risk";
@@ -40,6 +40,14 @@ export async function latestPrice(dataSymbol: string): Promise<number | null> {
 
 export async function activeTrades(filter: Partial<Trade> = {}): Promise<Trade[]> {
   return getStore().trades.all({ eq: filter, in: { field: "status", values: ACTIVE } });
+}
+
+/** Token, App ID and account for a connected Deriv account. */
+export function derivCredentials(broker: BrokerAccount): DerivCredentials {
+  if (!broker.encrypted_token || !broker.app_id || !broker.login) {
+    throw new Error(`${broker.label} needs reconnecting with a Deriv token and App ID`);
+  }
+  return { token: decryptSecret(broker.encrypted_token), appId: broker.app_id, accountId: broker.login };
 }
 
 /** Real or demo money is decided by the broker account, never by a setting in binaryTrades. */
@@ -179,7 +187,7 @@ export async function openTrade(
     const takeProfitAmount =
       price && tp !== null ? (stake * bot.deriv_multiplier * Math.abs(tp - price)) / price : undefined;
     try {
-      const res = await deps.derivOpen(decryptSecret(broker.encrypted_token!), {
+      const res = await deps.derivOpen(derivCredentials(broker), {
         symbol: bot.symbol,
         side: req.side,
         stake,
@@ -247,7 +255,7 @@ export async function closeTrade(trade: Trade, reason: string): Promise<Trade> {
   if (!broker) throw new Error("This trade's broker account is no longer connected — close it in your broker's app");
 
   if (broker.kind === "deriv") {
-    const res = await deps.derivClose(decryptSecret(broker.encrypted_token!), trade.broker_ref!);
+    const res = await deps.derivClose(derivCredentials(broker), trade.broker_ref!);
     const pnl = res.sold_for - trade.size;
     const closed = await store.trades.update(trade.id, {
       status: "closed",
@@ -414,7 +422,7 @@ export async function syncDerivAccount(broker: BrokerAccount): Promise<void> {
   try {
     const tracked = await activeTrades({ broker_account_id: broker.id });
     const snap = await deps.derivSnapshot(
-      decryptSecret(broker.encrypted_token!),
+      derivCredentials(broker),
       tracked.map((t) => t.broker_ref!).filter(Boolean),
     );
     await store.brokers.update(broker.id, {

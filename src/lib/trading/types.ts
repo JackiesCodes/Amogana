@@ -17,8 +17,10 @@ export interface BrokerAccount {
   balance: number;
   equity: number;
   is_demo: boolean;
-  /** AES-GCM encrypted Deriv API token (Deriv accounts only). */
+  /** AES-GCM encrypted Deriv Personal Access Token (Deriv accounts only). */
   encrypted_token: string | null;
+  /** App ID of the user's registered Deriv app, sent as Deriv-App-ID (Deriv accounts only). */
+  app_id: string | null;
   /** SHA-256 of the MT5 bridge key (MT5 accounts only). The key itself is shown once. */
   bridge_key_hash: string | null;
   last_sync_at: string | null;

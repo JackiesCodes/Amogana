@@ -5,7 +5,7 @@ import { dirname } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import postgres from "postgres";
 
-import { MIGRATIONS } from "@/lib/trading/schema";
+import { APPLIED_CHECKS, MIGRATIONS } from "@/lib/trading/schema";
 
 import type {
   Bot,
@@ -174,20 +174,16 @@ function ensureSchema(): Promise<void> {
   globalForSchema.__amoganaSchema ??= (async () => {
     const sql = postgres(url, { ssl: "require", max: 1, prepare: false, onnotice: () => {} });
     try {
-      const [row] = await sql`
-        select
-          to_regclass('public.equity') is not null as has_tables,
-          exists (
-            select 1 from information_schema.columns
-            where table_schema = 'public' and table_name = 'bots' and column_name = 'book'
-          ) as has_paper_mode`;
-      // 0001 creates the tables; 0002 removes paper mode. Both are idempotent.
-      const pending = !row?.has_tables ? MIGRATIONS : row.has_paper_mode ? MIGRATIONS.slice(1) : [];
-      for (const migration of pending) {
+      // Apply, in order, every migration whose changes are not in place yet (all are idempotent).
+      let applied = 0;
+      for (const migration of MIGRATIONS) {
+        const [row] = await sql.unsafe(APPLIED_CHECKS[migration.file]);
+        if (row?.done) continue;
         await sql.unsafe(migration.sql);
+        applied++;
         console.info(`[binaryTrades] applied ${migration.file}`);
       }
-      if (pending.length) {
+      if (applied) {
         // Make the Supabase REST API see the changes immediately, then give it a moment.
         await sql`notify pgrst, 'reload schema'`;
         await new Promise((resolve) => setTimeout(resolve, 1500));

@@ -181,6 +181,7 @@ function DerivConnect() {
   const { refresh } = useDashboard();
   const { toast } = useFeedback();
   const [token, setToken] = useState("");
+  const [appId, setAppId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -188,10 +189,11 @@ function DerivConnect() {
     setBusy(true);
     setError(null);
     try {
-      await api("/api/brokers", "POST", { kind: "deriv", token, label: "Deriv" });
+      const res = await api<{ brokers: PublicBroker[] }>("/api/brokers", "POST", { kind: "deriv", token, app_id: appId.trim() });
       setToken("");
       await refresh();
-      toast("Deriv account connected", "success");
+      const n = res.brokers.length;
+      toast(n === 1 ? `${res.brokers[0]!.label} connected` : `${n} Deriv accounts connected`, "success");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -207,17 +209,26 @@ function DerivConnect() {
       </p>
       <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
         <li>
-          Log in at app.deriv.com (switch to your <b className="text-foreground">demo</b> account to start).
+          Sign in at <b className="text-foreground">developers.deriv.com</b> with your Deriv login and register an app — copy its{" "}
+          <b className="text-foreground">App ID</b>.
         </li>
         <li>
-          Account Settings → <b className="text-foreground">API token</b> → create a token with only <b className="text-foreground">Read</b> and{" "}
-          <b className="text-foreground">Trade</b> scopes.
+          Create a <b className="text-foreground">Personal Access Token</b> with the <b className="text-foreground">trade</b> scope only (never
+          payment).
         </li>
-        <li>Paste it below. Each Deriv account (demo / real) needs its own token.</li>
+        <li>Paste both below. Each Deriv Options account the token can reach (demo and real) is connected separately.</li>
       </ol>
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-        <Input type="password" value={token} onChange={(e) => setToken(e.target.value)} placeholder="Deriv API token" autoComplete="off" />
-        <Button onClick={connect} disabled={busy || token.length < 8}>
+      <div className="mt-4 grid gap-2 sm:grid-cols-[9rem_1fr_auto]">
+        <Input value={appId} onChange={(e) => setAppId(e.target.value)} placeholder="App ID" autoComplete="off" aria-label="Deriv App ID" />
+        <Input
+          type="password"
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+          placeholder="Personal Access Token"
+          autoComplete="off"
+          aria-label="Deriv Personal Access Token"
+        />
+        <Button onClick={connect} disabled={busy || token.length < 8 || !appId.trim()}>
           {busy ? "Checking…" : "Connect"}
         </Button>
       </div>

@@ -3,22 +3,39 @@ import "server-only";
 import WebSocket from "ws";
 
 /**
- * Minimal Deriv WebSocket API client (https://developers.deriv.com).
+ * Deriv API client for Deriv's current platform (https://developers.deriv.com).
  *
- * Each call opens a short-lived connection, optionally authorises with the
- * user's API token, runs its requests and closes. Trading uses Multiplier
- * contracts (MULTUP / MULTDOWN), which work on Deriv forex, commodities,
- * crypto and synthetic indices and support stop-loss / take-profit amounts.
+ * Authenticated work goes through a Personal Access Token (PAT) plus the
+ * App ID of the user's registered Deriv app:
  *
- * Create the token at app.deriv.com → Settings → API token with the
- * "Read" and "Trade" scopes only. Never grant "Payments" or "Admin".
+ *   1. REST  GET  /trading/v1/options/accounts            → the user's Options accounts (demo / real)
+ *   2. REST  POST /trading/v1/options/accounts/{id}/otp   → one-time WebSocket URL for that account
+ *   3. WS    the OTP URL → buy / sell / portfolio / proposal_open_contract, scoped to that account
+ *
+ * Market data uses the public WebSocket (no token). Trading uses Multiplier
+ * contracts (MULTUP / MULTDOWN), which support stop-loss and take-profit amounts.
+ * The legacy wss://ws.derivws.com/websockets/v3 endpoint no longer accepts
+ * connections from cloud hosts (Cloudflare 520), so it is not used.
  */
 
-const DEFAULT_APP_ID = "1089"; // Deriv's public testing app id; register your own for production.
+const DEFAULT_PUBLIC_APP_ID = "1089"; // only used for public market data when DERIV_APP_ID is unset
 
-function endpoint(): string {
-  const base = process.env.DERIV_WS_URL ?? "wss://ws.derivws.com/websockets/v3";
-  return `${base}?app_id=${process.env.DERIV_APP_ID ?? DEFAULT_APP_ID}`;
+function apiBase(): string {
+  return (process.env.DERIV_API_URL ?? "https://api.derivws.com").replace(/\/$/, "");
+}
+
+function publicEndpoint(): string {
+  const base = apiBase().replace(/^http/, "ws");
+  return `${base}/trading/v1/options/ws/public?app_id=${process.env.DERIV_APP_ID ?? DEFAULT_PUBLIC_APP_ID}`;
+}
+
+export interface DerivCredentials {
+  /** Personal Access Token. */
+  token: string;
+  /** App ID of the user's registered Deriv app (Deriv-App-ID header). */
+  appId: string;
+  /** Options account to trade on, e.g. "DOT90004580". */
+  accountId: string;
 }
 
 export class DerivError extends Error {
@@ -31,6 +48,30 @@ export class DerivError extends Error {
 }
 
 type Json = Record<string, unknown>;
+
+async function rest<T>(path: string, auth: { token: string; appId: string }, method: "GET" | "POST" = "GET"): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${apiBase()}${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${auth.token}`,
+        "Deriv-App-ID": auth.appId,
+        Accept: "application/json",
+      },
+      signal: AbortSignal.timeout(15000),
+      cache: "no-store",
+    });
+  } catch (error) {
+    throw new DerivError(`Could not reach Deriv: ${(error as Error).message}`);
+  }
+  const body = (await res.json().catch(() => ({}))) as { data?: unknown; errors?: Array<{ message?: string; code?: string }> };
+  if (!res.ok) {
+    const err = body.errors?.[0];
+    throw new DerivError(err?.message ?? `Deriv returned HTTP ${res.status}`, err?.code ?? String(res.status));
+  }
+  return body.data as T;
+}
 
 class DerivSession {
   private nextId = 1;
@@ -82,8 +123,12 @@ class DerivSession {
   }
 }
 
-export async function withDeriv<T>(token: string | null, fn: (s: DerivSession) => Promise<T>): Promise<T> {
-  const ws = new WebSocket(endpoint());
+/** Run requests on a WebSocket scoped to one account (via a fresh OTP), or on the public feed when `cred` is null. */
+export async function withDeriv<T>(cred: DerivCredentials | null, fn: (s: DerivSession) => Promise<T>): Promise<T> {
+  const url = cred
+    ? (await rest<{ url: string }>(`/trading/v1/options/accounts/${encodeURIComponent(cred.accountId)}/otp`, cred, "POST")).url
+    : publicEndpoint();
+  const ws = new WebSocket(url);
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => reject(new DerivError("Could not reach Deriv (timeout)")), 10000);
     ws.once("open", () => {
@@ -97,7 +142,6 @@ export async function withDeriv<T>(token: string | null, fn: (s: DerivSession) =
   });
   const session = new DerivSession(ws);
   try {
-    if (token) await session.send({ authorize: token });
     return await fn(session);
   } finally {
     ws.close();
@@ -108,25 +152,23 @@ export async function withDeriv<T>(token: string | null, fn: (s: DerivSession) =
 // Account
 
 export interface DerivAccountInfo {
-  loginid: string;
-  currency: string;
+  account_id: string;
+  account_type: "demo" | "real";
   balance: number;
-  is_virtual: boolean;
-  scopes: string[];
+  currency: string;
+  status: string;
 }
 
-export async function derivAuthorize(token: string): Promise<DerivAccountInfo> {
-  return withDeriv(null, async (s) => {
-    const res = await s.send<{ authorize: Json }>({ authorize: token });
-    const a = res.authorize;
-    return {
-      loginid: String(a.loginid),
-      currency: String(a.currency || "USD"),
-      balance: Number(a.balance ?? 0),
-      is_virtual: Boolean(a.is_virtual),
-      scopes: (a.scopes as string[]) ?? [],
-    };
-  });
+/** The user's Options trading accounts (demo and real) for this token + app. */
+export async function derivAccounts(token: string, appId: string): Promise<DerivAccountInfo[]> {
+  const data = await rest<Json[]>("/trading/v1/options/accounts", { token, appId });
+  return (data ?? []).map((a) => ({
+    account_id: String(a.account_id),
+    account_type: a.account_type === "real" ? "real" : "demo",
+    balance: Number(a.balance ?? 0),
+    currency: String(a.currency || "USD"),
+    status: String(a.status ?? "active"),
+  }));
 }
 
 export interface DerivOpenContract {
@@ -159,11 +201,13 @@ function toOpenContract(poc: Json): DerivOpenContract {
 
 /** Balance plus every open Multiplier contract with live profit. */
 export async function derivSnapshot(
-  token: string,
+  cred: DerivCredentials,
   trackedContractIds: string[],
 ): Promise<{ balance: number; currency: string; equity: number; contracts: DerivOpenContract[] }> {
-  return withDeriv(token, async (s) => {
-    const bal = await s.send<{ balance: { balance: number; currency: string } }>({ balance: 1 });
+  // Balance comes from the documented REST account listing; positions from the account's WebSocket.
+  const account = (await derivAccounts(cred.token, cred.appId)).find((a) => a.account_id === cred.accountId);
+  if (!account) throw new DerivError(`Deriv account ${cred.accountId} is no longer available for this token`);
+  return withDeriv(cred, async (s) => {
     const portfolio = await s.send<{ portfolio: { contracts: Json[] } }>({ portfolio: 1 });
     const ids = new Set([
       ...portfolio.portfolio.contracts
@@ -178,9 +222,9 @@ export async function derivSnapshot(
     }
     const openValue = contracts.filter((c) => !c.is_sold).reduce((sum, c) => sum + c.stake + c.profit, 0);
     return {
-      balance: Number(bal.balance.balance),
-      currency: bal.balance.currency,
-      equity: Number(bal.balance.balance) + openValue,
+      balance: account.balance,
+      currency: account.currency,
+      equity: account.balance + openValue,
       contracts,
     };
   });
@@ -202,7 +246,7 @@ export interface DerivOrder {
 }
 
 export async function derivOpen(
-  token: string,
+  cred: DerivCredentials,
   order: DerivOrder,
 ): Promise<{ contract_id: string; buy_price: number; entry_spot: number | null }> {
   const round = (n: number) => Math.round(n * 100) / 100;
@@ -210,7 +254,7 @@ export async function derivOpen(
   if (order.stopLossAmount) limit_order.stop_loss = round(Math.min(order.stopLossAmount, order.stake));
   if (order.takeProfitAmount) limit_order.take_profit = round(order.takeProfitAmount);
 
-  return withDeriv(token, async (s) => {
+  return withDeriv(cred, async (s) => {
     const res = await s.send<{ buy: Json }>({
       buy: 1,
       price: round(order.stake),
@@ -239,8 +283,8 @@ export async function derivOpen(
   });
 }
 
-export async function derivClose(token: string, contractId: string): Promise<{ sold_for: number }> {
-  return withDeriv(token, async (s) => {
+export async function derivClose(cred: DerivCredentials, contractId: string): Promise<{ sold_for: number }> {
+  return withDeriv(cred, async (s) => {
     const res = await s.send<{ sell: { sold_for: number } }>({ sell: Number(contractId), price: 0 });
     return { sold_for: Number(res.sell.sold_for) };
   });

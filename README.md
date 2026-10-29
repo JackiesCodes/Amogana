@@ -104,12 +104,18 @@ Your MT5 terminal must stay running for bots to trade: use a VPS for 24/7.
 
 ### Deriv
 
-1. At app.deriv.com, open *Account Settings → API token* and create a token
-   with only the **Read** and **Trade** scopes. binaryTrades refuses tokens with
-   Payments or Admin scopes.
-2. Go to **Brokers → Deriv**, paste the token and click **Connect**. The token
-   is encrypted at rest (AES-256-GCM).
-3. Deriv bots trade Multiplier contracts. Stake is sized so that hitting the
+binaryTrades uses Deriv's current API (`api.derivws.com`). The legacy
+`ws.derivws.com` WebSocket no longer accepts connections from cloud hosts.
+
+1. Sign in at developers.deriv.com with your Deriv login and register an app;
+   copy its **App ID**.
+2. Create a **Personal Access Token** with the **trade** scope only (never
+   payment).
+3. Go to **Brokers → Deriv**, enter the App ID and token, and click
+   **Connect**. Every active Deriv Options account the token can reach (demo
+   and real) is connected separately, and real or demo money follows that
+   account. The token is encrypted at rest (AES-256-GCM).
+4. Deriv bots trade Multiplier contracts. Stake is sized so that hitting the
    stop loses about your risk amount, and is never more than 25% of equity.
    Pick a multiplier Deriv allows for that market.
 

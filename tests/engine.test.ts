@@ -24,7 +24,7 @@ deps.candles = async (_symbol, granularity, count) =>
     low: price,
     close: price,
   }));
-deps.derivOpen = async (token, order) => {
+deps.derivOpen = async (_cred, order) => {
   const id = `c${contracts.length + 1}`;
   contracts.push({ id, stake: order.stake, side: order.side, sold: false });
   return { contract_id: id, buy_price: order.stake, entry_spot: price };
@@ -34,10 +34,10 @@ deps.derivClose = async (_token, id) => {
   c.sold = true;
   return { sold_for: c.stake + 5 };
 };
-deps.derivSnapshot = async (token) => ({
-  balance: derivEquity[token] ?? 0,
+deps.derivSnapshot = async (cred) => ({
+  balance: derivEquity[cred.token] ?? 0,
   currency: "USD",
-  equity: derivEquity[token] ?? 0,
+  equity: derivEquity[cred.token] ?? 0,
   contracts: [],
 });
 
@@ -45,7 +45,7 @@ async function derivAccount(token: string, isDemo: boolean, equity: number): Pro
   derivEquity[token] = equity;
   const account: BrokerAccount = {
     id: newId(), kind: "deriv", label: isDemo ? "Deriv demo" : "Deriv real", status: "connected", login: token,
-    server: null, currency: "USD", balance: equity, equity, is_demo: isDemo, encrypted_token: encryptSecret(token),
+    server: null, currency: "USD", balance: equity, equity, is_demo: isDemo, encrypted_token: encryptSecret(token), app_id: "12345",
     bridge_key_hash: null, last_sync_at: nowIso(), error: null, created_at: nowIso(),
   };
   await getStore().brokers.insert(account);
@@ -173,7 +173,7 @@ describe("MT5 bridge", () => {
   async function mt5Account(patch: Partial<BrokerAccount> = {}): Promise<BrokerAccount> {
     const account: BrokerAccount = {
       id: newId(), kind: "mt5", label: "Exness MT5", status: "connected", login: null, server: null,
-      currency: "USD", balance: 1000, equity: 1000, is_demo: true, encrypted_token: null,
+      currency: "USD", balance: 1000, equity: 1000, is_demo: true, encrypted_token: null, app_id: null,
       bridge_key_hash: "x", last_sync_at: nowIso(), error: null, created_at: nowIso(), ...patch,
     };
     await getStore().brokers.insert(account);
@@ -231,5 +231,25 @@ describe("MT5 bridge", () => {
     });
     const [trade] = await activeTrades();
     expect(trade).toMatchObject({ external: true, symbol: "XAUUSDm", magic: 42, book: "real" });
+  });
+});
+
+describe("Deriv credentials", () => {
+  it("passes the decrypted token, App ID and account to Deriv calls", async () => {
+    const seen: unknown[] = [];
+    const original = deps.derivOpen;
+    deps.derivOpen = async (cred, order) => {
+      seen.push(cred);
+      return original(cred, order);
+    };
+    try {
+      const demo = await derivAccount("pat-123", true, 1000);
+      const bot = makeBot({ broker_account_id: demo.id });
+      await getStore().bots.insert(bot);
+      await processSignal({ bot, source: "tradingview", action: "buy", price: 1.1 });
+      expect(seen).toEqual([{ token: "pat-123", appId: "12345", accountId: "pat-123" }]);
+    } finally {
+      deps.derivOpen = original;
+    }
   });
 });

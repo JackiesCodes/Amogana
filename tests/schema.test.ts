@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { describe, expect, it } from "vitest";
 
-import { MIGRATIONS } from "@/lib/trading/schema";
+import { APPLIED_CHECKS, MIGRATIONS } from "@/lib/trading/schema";
 
 describe("database schema", () => {
   it.each(MIGRATIONS.map((m) => [m.file, m.sql]))("%s matches supabase/migrations", (file, sql) => {
@@ -18,6 +18,16 @@ describe("database schema", () => {
     expect(book.rows).toHaveLength(0);
     await expect(db.exec("insert into equity (id, book, equity) values ('x', 'paper', 1)")).rejects.toThrow();
     await db.exec("insert into equity (id, book, equity) values ('y', 'demo', 1)");
+    await db.close();
+  });
+
+  it("reports each migration as done exactly when its changes are in place", async () => {
+    const db = new PGlite();
+    for (const m of MIGRATIONS) {
+      expect((await db.query<{ done: boolean }>(APPLIED_CHECKS[m.file])).rows[0]!.done).toBe(false);
+      await db.exec(m.sql);
+      expect((await db.query<{ done: boolean }>(APPLIED_CHECKS[m.file])).rows[0]!.done).toBe(true);
+    }
     await db.close();
   });
 

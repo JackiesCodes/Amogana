@@ -179,4 +179,22 @@ update settings
   where not (books ? 'real' and books ? 'demo');
 `,
   },
+  {
+    file: "0003_deriv_app_id.sql",
+    sql: `-- 0003: Deriv's current API authenticates with a Personal Access Token plus the
+-- App ID of the user's registered Deriv app; store the App ID per account.
+-- Idempotent: safe to run more than once.
+
+alter table brokers add column if not exists app_id text;
+`,
+  },
 ] as const;
+
+/** For each migration, a query returning `done = true` once its changes are in place. */
+export const APPLIED_CHECKS: Record<(typeof MIGRATIONS)[number]["file"], string> = {
+  "0001_amogana_autotrade.sql": "select to_regclass('public.equity') is not null as done",
+  "0002_account_based_books.sql":
+    "select not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'bots' and column_name = 'book') as done",
+  "0003_deriv_app_id.sql":
+    "select exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'brokers' and column_name = 'app_id') as done",
+};
