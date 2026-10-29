@@ -5,7 +5,7 @@ import { getStore } from "@/lib/trading/store";
 export const dynamic = "force-dynamic";
 
 /**
- * Called by AmoganaBridge.mq5 every few seconds. Authenticated by the
+ * Called by BinaryTradesBridge.mq5 every few seconds. Authenticated by the
  * per-account bridge key (X-Bridge-Key header) generated when you add the
  * account on the Brokers page. Responds with plain text: "OK" on the first
  * line, then one queued command per line.

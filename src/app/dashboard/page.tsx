@@ -73,7 +73,7 @@ export default function OverviewPage() {
         <Panel className="border-seal">
           <h2 className="text-base font-semibold text-ivory">Connect your first broker account</h2>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Amogana trades only through accounts you connect. Use a demo account at Exness or Deriv to practise with your broker&apos;s demo
+            binaryTrades trades only through accounts you connect. Use a demo account at Exness or Deriv to practise with your broker&apos;s demo
             money, or a real account to trade real money. Everything on this dashboard comes from those accounts.
           </p>
           <Link

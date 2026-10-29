@@ -1,8 +1,8 @@
 {
-  "name": "amogana",
+  "name": "binarytrades",
   "version": "0.1.0",
   "private": true,
-  "description": "Amogana — auto-trading control room for Exness (MT5), Deriv and TradingView bots with built-in risk management.",
+  "description": "binaryTrades — auto-trading control room for Exness (MT5), Deriv and TradingView bots with built-in risk management.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

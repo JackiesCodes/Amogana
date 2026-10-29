@@ -124,7 +124,7 @@ function ExnessConnect({ onCreated }: { onCreated: (b: { key: string; label: str
   return (
     <Panel title="Exness (MetaTrader 5)">
       <p className="text-sm text-muted-foreground">
-        Exness trades through MetaTrader 5. You run the small <b className="text-foreground">Amogana Bridge</b> EA in your MT5 terminal; it
+        Exness trades through MetaTrader 5. You run the small <b className="text-foreground">binaryTrades Bridge</b> EA in your MT5 terminal; it
         executes the orders and reports positions back here. Works with any MT5 broker (Deriv MT5 too).
       </p>
       <div className="mt-4 space-y-3">
@@ -136,7 +136,7 @@ function ExnessConnect({ onCreated }: { onCreated: (b: { key: string; label: str
             {busy ? "Creating…" : "Generate bridge key"}
           </Button>
           <Button variant="outline" asChild>
-            <a href="/downloads/AmoganaBridge.mq5" download>
+            <a href="/downloads/BinaryTradesBridge.mq5" download>
               <Download /> Download EA
             </a>
           </Button>
@@ -160,14 +160,14 @@ function BridgeInstructions({ bridgeKey, label, onDone }: { bridgeKey: string; l
       </div>
       <ol className="mt-4 list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
         <li>
-          In MT5: <b className="text-foreground">File → Open Data Folder → MQL5 → Experts</b>, copy <code>AmoganaBridge.mq5</code> there, then
+          In MT5: <b className="text-foreground">File → Open Data Folder → MQL5 → Experts</b>, copy <code>BinaryTradesBridge.mq5</code> there, then
           right-click it in the Navigator → <b className="text-foreground">Compile</b> (or open it in MetaEditor and press F7).
         </li>
         <li>
           <b className="text-foreground">Tools → Options → Expert Advisors</b>: tick <i>Allow algorithmic trading</i> and <i>Allow WebRequest for listed URL</i>, and
           add <code>{url}</code>.
         </li>
-        <li>Drag <b className="text-foreground">AmoganaBridge</b> onto any one chart. Paste the Server URL and Bridge key into its inputs and press OK.</li>
+        <li>Drag <b className="text-foreground">BinaryTradesBridge</b> onto any one chart. Paste the Server URL and Bridge key into its inputs and press OK.</li>
         <li>Make sure the <b className="text-foreground">Algo Trading</b> button in the toolbar is green. This page shows “Connected” within a few seconds.</li>
       </ol>
       <Button variant="outline" className="mt-4" onClick={onDone}>

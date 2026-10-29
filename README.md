@@ -1,4 +1,4 @@
-# Amogana — Auto-Trading Control Room
+# binaryTrades — Auto-Trading Control Room
 
 One dashboard to run, watch and risk-manage trading bots on **Exness
 (MetaTrader 5)**, **Deriv** and **TradingView**.
@@ -13,7 +13,7 @@ One dashboard to run, watch and risk-manage trading bots on **Exness
   has never seen. Turn the winner into a bot in one click.
 - **Real or demo money is decided by the broker account**: connect a demo
   account at Exness or Deriv to practise with your broker's demo money, or a
-  real account to trade real money. Amogana never simulates trades itself.
+  real account to trade real money. binaryTrades never simulates trades itself.
 - **Risk Guard**: every order passes risk sizing (risk % per trade), a daily
   loss limit, a max-drawdown kill switch and open-trade caps before it can
   reach a broker. There is also a manual **kill switch** that pauses all bots
@@ -33,7 +33,7 @@ Built-in strategy (each new candle) ─────────────┼�
 Manual button on the dashboard ──────────────────┘                                   │
                                                      ┌───────────────────────────────┤
                                                      ▼                               ▼
-                                              Deriv API (Multiplier          MT5 command queue ──► AmoganaBridge EA
+                                              Deriv API (Multiplier          MT5 command queue ──► BinaryTradesBridge EA
                                               contracts, SL/TP)              (/api/mt5/sync)       in your terminal
 ```
 
@@ -45,7 +45,7 @@ Manual button on the dashboard ────────────────�
   the demo bots. The open dashboard calls it
   every minute. For 24/7 trading, point a scheduler at the cron endpoint
   (see below).
-- The **MT5 bridge EA** (`public/downloads/AmoganaBridge.mq5`) calls
+- The **MT5 bridge EA** (`public/downloads/BinaryTradesBridge.mq5`) calls
   `/api/mt5/sync` every few seconds. It sends account info, open positions and
   closing deals, and receives queued orders, which it sizes from the risk
   amount and stop distance using the symbol's tick value. Positions opened by
@@ -63,7 +63,7 @@ cp .env.example .env.local   # set APP_PASSWORD, CREDENTIALS_ENCRYPTION_KEY, CRO
 npm run build && npm start   # http://localhost:3000
 ```
 
-With the Supabase variables empty, data is stored in `.data/amogana.json`.
+With the Supabase variables empty, data is stored in `.data/binarytrades.json`.
 That's ideal on a Windows VPS that also runs your MT5 terminal: one machine,
 always on.
 
@@ -91,7 +91,7 @@ choose; whether it trades real or demo money depends only on that account.
    `MQL5/Experts` folder (*File → Open Data Folder*) and compile it.
 3. In MT5, go to *Tools → Options → Expert Advisors*: allow algorithmic
    trading and *Allow WebRequest for listed URL*, then add your Server URL.
-4. Attach **AmoganaBridge** to one chart, paste the URL and key, and turn on
+4. Attach **BinaryTradesBridge** to one chart, paste the URL and key, and turn on
    **Algo Trading**. The account shows **Connected** within seconds.
 5. When creating a bot, use the symbol exactly as Market Watch shows it
    (e.g. `EURUSDm`, `XAUUSDm`).
@@ -101,7 +101,7 @@ Your MT5 terminal must stay running for bots to trade: use a VPS for 24/7.
 ### Deriv
 
 1. At app.deriv.com, open *Account Settings → API token* and create a token
-   with only the **Read** and **Trade** scopes. Amogana refuses tokens with
+   with only the **Read** and **Trade** scopes. binaryTrades refuses tokens with
    Payments or Admin scopes.
 2. Go to **Brokers → Deriv**, paste the token and click **Connect**. The token
    is encrypted at rest (AES-256-GCM).
@@ -163,7 +163,7 @@ src/
     trading/              # engine, risk, store (Supabase or JSON file), types, symbols
     brokers/              # deriv.ts (WebSocket API), mt5.ts (bridge protocol)
     strategies/           # indicators, strategies, backtester + walk-forward optimiser
-public/downloads/AmoganaBridge.mq5   # MetaTrader 5 bridge EA
+public/downloads/BinaryTradesBridge.mq5   # MetaTrader 5 bridge EA
 supabase/migrations/      # Postgres schema
 tests/                    # vitest: strategies, risk, engine, MT5 bridge
 ```

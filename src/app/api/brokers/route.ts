@@ -74,7 +74,7 @@ export async function POST(request: Request) {
   }
 
   // MT5: generate a bridge key the EA will present. It is shown once, only its hash is stored.
-  const bridgeKey = `amg_${randomToken(24)}`;
+  const bridgeKey = `bt_${randomToken(24)}`;
   const account: BrokerAccount = { ...base, bridge_key_hash: sha256(bridgeKey) };
   await store.brokers.insert(account);
   await log("info", `${account.label} added — waiting for the MT5 bridge to connect`);

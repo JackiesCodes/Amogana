@@ -7,7 +7,7 @@ import { getStore, log, newId, nowIso } from "@/lib/trading/store";
 import type { BrokerAccount, Mt5Command, Trade } from "@/lib/trading/types";
 
 /**
- * Server side of the MetaTrader 5 bridge (public/downloads/AmoganaBridge.mq5).
+ * Server side of the MetaTrader 5 bridge (public/downloads/BinaryTradesBridge.mq5).
  *
  * MT5 has no inbound API, so the bridge EA running in your terminal calls
  * POST /api/mt5/sync every few seconds with its account state, positions,
@@ -122,7 +122,7 @@ export async function ingestMt5Report(account: BrokerAccount, report: Mt5Report)
     let position = trade.broker_ref ? byTicket.get(trade.broker_ref) : undefined;
     // Link a fill whose result report was lost, via the order comment.
     if (!position && !trade.broker_ref) {
-      position = report.positions.find((p) => p.comment === `amg:${trade.id.slice(0, 8)}`);
+      position = report.positions.find((p) => p.comment === `bt:${trade.id.slice(0, 8)}`);
     }
     if (position) {
       seen.add(position.ticket);
@@ -150,7 +150,7 @@ export async function ingestMt5Report(account: BrokerAccount, report: Mt5Report)
     }
   }
 
-  // 3. Positions opened outside Amogana (your own EAs or manual trades).
+  // 3. Positions opened outside binaryTrades (your own EAs or manual trades).
   const bots = await store.bots.all({ eq: { broker_account_id: account.id } });
   for (const p of report.positions) {
     if (seen.has(p.ticket)) continue;

@@ -11,7 +11,7 @@ export async function POST(_request: Request, { params }: { params: { id: string
   const trade = await store.trades.get(params.id);
   if (!trade) return jsonError(404, "TRADE_NOT_FOUND");
 
-  // Positions opened outside Amogana on MT5 are closed by ticket through the bridge.
+  // Positions opened outside binaryTrades on MT5 are closed by ticket through the bridge.
   if (trade.external && trade.broker_account_id) {
     const broker = await store.brokers.get(trade.broker_account_id);
     if (broker?.kind === "mt5") {

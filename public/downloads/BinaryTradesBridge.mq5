@@ -1,26 +1,26 @@
 //+------------------------------------------------------------------+
-//| AmoganaBridge.mq5                                                |
-//| Connects this MetaTrader 5 account to your Amogana dashboard.   |
+//| BinaryTradesBridge.mq5                                                |
+//| Connects this MetaTrader 5 account to your binaryTrades dashboard.   |
 //|                                                                  |
 //| Setup:                                                           |
 //|  1. Tools > Options > Expert Advisors: tick "Allow algorithmic    |
 //|     trading" and "Allow WebRequest for listed URL", then add     |
-//|     your Amogana server URL (e.g. https://your-app.vercel.app).  |
+//|     your binaryTrades server URL (e.g. https://your-app.vercel.app).  |
 //|  2. Attach this EA to ONE chart (any symbol) and fill in the     |
 //|     Server URL and Bridge key shown on the Brokers page.         |
 //|  3. Keep the terminal running (a VPS keeps it online 24/7).      |
 //|                                                                  |
 //| Every few seconds the EA sends account info, open positions and |
-//| recently closed deals, and executes the orders Amogana queued.   |
+//| recently closed deals, and executes the orders binaryTrades queued.   |
 //| Lot size is calculated here from the risk amount and stop loss.  |
 //+------------------------------------------------------------------+
-#property copyright "Amogana"
+#property copyright "binaryTrades"
 #property version   "1.00"
 #property strict
 
 #include <Trade/Trade.mqh>
 
-input string InpServerUrl       = "http://localhost:3000"; // Amogana server URL
+input string InpServerUrl       = "http://localhost:3000"; // binaryTrades server URL
 input string InpBridgeKey       = "";                      // Bridge key (from the Brokers page)
 input int    InpPollSeconds     = 3;                       // Sync interval (seconds)
 input int    InpDefaultSlPoints = 300;                     // Stop (points) when a signal has none
@@ -37,7 +37,7 @@ int OnInit()
 {
    if(StringLen(InpBridgeKey) < 10)
    {
-      Alert("AmoganaBridge: paste the Bridge key from the Amogana Brokers page into the EA inputs.");
+      Alert("BinaryTradesBridge: paste the Bridge key from the binaryTrades Brokers page into the EA inputs.");
       return INIT_PARAMETERS_INCORRECT;
    }
    g_trade.SetDeviationInPoints(InpSlippagePoints);
@@ -217,7 +217,7 @@ void Sync()
 
 void ShowStatus()
 {
-   Comment("Amogana Bridge: ", g_status,
+   Comment("binaryTrades Bridge: ", g_status,
            "\nLast sync: ", (g_lastOk > 0 ? TimeToString(g_lastOk, TIME_DATE | TIME_SECONDS) : "never"),
            "\nAlgo trading: ", (TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) ? "ON" : "OFF — press the Algo Trading button"));
 }
@@ -231,7 +231,7 @@ void Execute(string line)
    string f[];
    if(StringSplit(line, '|', f) < 10)
    {
-      Print("AmoganaBridge: malformed command: ", line);
+      Print("BinaryTradesBridge: malformed command: ", line);
       return;
    }
    string id = f[0], type = f[1];
@@ -320,7 +320,7 @@ void OpenOrder(string id, string symbol, string side, double riskMoney, double s
    if(deal > 0 && HistoryDealSelect(deal))
       ticket = IntegerToString(HistoryDealGetInteger(deal, DEAL_POSITION_ID));
    AddResult(id, true, ticket, g_trade.ResultPrice(), g_trade.ResultVolume(), "");
-   Print("AmoganaBridge: ", side, " ", DoubleToString(lots, 2), " ", symbol, " sl=", sl, " tp=", tp, " ticket=", ticket);
+   Print("BinaryTradesBridge: ", side, " ", DoubleToString(lots, 2), " ", symbol, " sl=", sl, " tp=", tp, " ticket=", ticket);
 }
 
 void ClosePosition(string id, string ticketText, string comment)

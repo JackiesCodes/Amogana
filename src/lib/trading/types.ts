@@ -82,7 +82,7 @@ export interface Trade {
   status: TradeStatus;
   broker_ref: string | null;
   magic: number | null;
-  /** True for positions opened outside Amogana (e.g. your own EA) and seen through the MT5 bridge. */
+  /** True for positions opened outside binaryTrades (e.g. your own EA) and seen through the MT5 bridge. */
   external: boolean;
   close_reason: string | null;
   exit_price: number | null;

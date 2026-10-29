@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Amogana — Auto-Trading Control Room",
-    short_name: "Amogana",
+    name: "binaryTrades — Auto-Trading Control Room",
+    short_name: "binaryTrades",
     description: "Run, monitor and risk-manage your trading bots.",
     start_url: "/dashboard",
     display: "standalone",

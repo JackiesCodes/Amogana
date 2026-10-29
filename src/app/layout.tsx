@@ -16,11 +16,11 @@ const fontMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Amogana — Auto-Trading Control Room",
+  title: "binaryTrades — Auto-Trading Control Room",
   description:
     "Run, monitor and risk-manage trading bots across Exness (MetaTrader 5), Deriv and TradingView from one dashboard.",
-  applicationName: "Amogana",
-  appleWebApp: { capable: true, title: "Amogana", statusBarStyle: "black-translucent" },
+  applicationName: "binaryTrades",
+  appleWebApp: { capable: true, title: "binaryTrades", statusBarStyle: "black-translucent" },
   formatDetection: { telephone: false },
 };
 

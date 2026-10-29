@@ -23,7 +23,7 @@ import type {
  *
  *  - Supabase (Postgres) when NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY
  *    are set — use this for serverless hosting (Vercel etc.).
- *  - A JSON file (DATA_FILE, default .data/amogana.json) otherwise — fine for
+ *  - A JSON file (DATA_FILE, default .data/binarytrades.json) otherwise — fine for
  *    running on your own PC or a VPS, which is also where the bot runner lives.
  */
 
@@ -124,7 +124,7 @@ class FileBackend {
       } catch (error) {
         if (!this.writeWarned) {
           this.writeWarned = true;
-          console.warn(`[amogana] could not write ${this.path}; data will not survive a restart`, error);
+          console.warn(`[binaryTrades] could not write ${this.path}; data will not survive a restart`, error);
         }
       }
     }, 250);
@@ -185,7 +185,7 @@ function ensureSchema(): Promise<void> {
       const pending = !row?.has_tables ? MIGRATIONS : row.has_paper_mode ? MIGRATIONS.slice(1) : [];
       for (const migration of pending) {
         await sql.unsafe(migration.sql);
-        console.info(`[amogana] applied ${migration.file}`);
+        console.info(`[binaryTrades] applied ${migration.file}`);
       }
       if (pending.length) {
         // Make the Supabase REST API see the changes immediately, then give it a moment.
@@ -197,7 +197,7 @@ function ensureSchema(): Promise<void> {
     }
   })().catch((error) => {
     globalForSchema.__amoganaSchema = undefined; // retry on the next request
-    console.error("[amogana] could not create database tables", error);
+    console.error("[binaryTrades] could not create database tables", error);
   });
   return globalForSchema.__amoganaSchema;
 }
@@ -266,7 +266,7 @@ function buildStore(): Store {
     };
   }
 
-  const file = new FileBackend(process.env.DATA_FILE ?? ".data/amogana.json");
+  const file = new FileBackend(process.env.DATA_FILE ?? ".data/binarytrades.json");
   return {
     backend: "file",
     settings: file.collection("settings"),

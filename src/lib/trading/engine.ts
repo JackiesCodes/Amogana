@@ -42,7 +42,7 @@ export async function activeTrades(filter: Partial<Trade> = {}): Promise<Trade[]
   return getStore().trades.all({ eq: filter, in: { field: "status", values: ACTIVE } });
 }
 
-/** Real or demo money is decided by the broker account, never by a setting in Amogana. */
+/** Real or demo money is decided by the broker account, never by a setting in binaryTrades. */
 export function bookOf(broker: Pick<BrokerAccount, "is_demo">): Book {
   return broker.is_demo ? "demo" : "real";
 }
@@ -225,7 +225,7 @@ export async function openTrade(
       sl: sl ?? 0,
       tp: tp ?? 0,
       magic: bot.magic,
-      comment: `amg:${trade.id.slice(0, 8)}`,
+      comment: `bt:${trade.id.slice(0, 8)}`,
     },
     status: "queued",
     result: null,
@@ -274,7 +274,7 @@ export async function closeTrade(trade: Trade, reason: string): Promise<Trade> {
     account_id: broker.id,
     trade_id: trade.id,
     type: "close",
-    payload: { ticket: trade.broker_ref ?? "", comment: `amg:${trade.id.slice(0, 8)}` },
+    payload: { ticket: trade.broker_ref ?? "", comment: `bt:${trade.id.slice(0, 8)}` },
     status: "queued",
     result: null,
     created_at: nowIso(),
@@ -301,7 +301,7 @@ export async function setKillSwitch(on: boolean, reason = "Kill switch pressed")
       await log("error", `Could not close ${trade.symbol}: ${(error as Error).message}`, { bot_id: trade.bot_id });
     }
   }
-  // Also flatten positions Amogana does not track (e.g. your own EAs).
+  // Also flatten positions binaryTrades does not track (e.g. your own EAs).
   for (const broker of await store.brokers.all({ eq: { kind: "mt5" } })) {
     await store.commands.insert({
       id: newId(),
